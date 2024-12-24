@@ -57,6 +57,10 @@ try
             return CreateDevicePlugins(pluginAssembly);
         }).ToList();
     }
+    else 
+    {
+        app.Logger.LogWarning("No Plugins loaded");
+    }
 
     if (devicePlugins != null && devicePlugins.Count() > 0)
     {

@@ -1,10 +1,10 @@
 
-FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine AS base
-RUN apk add --no-cache tzdata
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 WORKDIR /app
+RUN apk add --upgrade --no-cache tzdata
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
-EXPOSE 443
-
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
