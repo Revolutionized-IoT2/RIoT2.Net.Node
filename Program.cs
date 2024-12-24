@@ -10,7 +10,6 @@ using System.Reflection;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<JsonOptions>(o =>
@@ -21,10 +20,25 @@ builder.Services.Configure<JsonOptions>(o =>
     o.JsonSerializerOptions.WriteIndented = true;
 });
 
-builder.Host.UseSerilog((ctx, lc) => lc
-    .WriteTo.Console()
-    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
+var serilog = new LoggerConfiguration()
+   .WriteTo.Console()
+   .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true))
+   .CreateLogger();
 
+
+ILoggerFactory logger = LoggerFactory.Create(log =>
+{
+    log.AddSerilog(serilog.CreateLogger());
+
+});
+
+Microsoft.Extensions.Logging.ILogger myLogger = logger.CreateLogger("RIoT2.Net.Node");
+
+//builder.Host.UseSerilog((ctx, lc) => lc
+//    .WriteTo.Console()
+//    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
+
+builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(myLogger);
 builder.Services.AddSingleton<INodeConfigurationService, ConfigurationService>();
 builder.Services.AddSingleton<IMemoryStorageService, MemoryStorageService>();
 builder.Services.AddSingleton<ICommandService, CommandService>();
@@ -54,7 +68,7 @@ try
         devicePlugins = pluginFiles.SelectMany(pluginFileInfo =>
         {
             Assembly pluginAssembly = LoadPlugin(pluginFileInfo.FullName);
-            return CreateDevicePlugins(pluginAssembly);
+            return CreateDevicePlugins(pluginAssembly, app.Services);
         }).ToList();
     }
     else 
@@ -80,7 +94,7 @@ static Assembly LoadPlugin(string path)
     return loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(path));
 }
 
-static IEnumerable<IDevicePlugin> CreateDevicePlugins(Assembly assembly)
+static IEnumerable<IDevicePlugin> CreateDevicePlugins(Assembly assembly, IServiceProvider services)
 {
     int count = 0;
 
@@ -88,7 +102,7 @@ static IEnumerable<IDevicePlugin> CreateDevicePlugins(Assembly assembly)
     {
         if (typeof(IDevicePlugin).IsAssignableFrom(type))
         {
-            IDevicePlugin result = Activator.CreateInstance(type) as IDevicePlugin;
+            IDevicePlugin result = Activator.CreateInstance(type, services) as IDevicePlugin;
             if (result != null)
             {
                 count++;
