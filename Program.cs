@@ -184,13 +184,23 @@ app.MapPost("/api/webhook/{address}", ([FromBody] object content, string address
 });
 
 //TODO send this url to orchrestrator when system comes online...
-app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService) =>
+app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
 {
     List<DeviceConfiguration> templates = new List<DeviceConfiguration>();
     foreach (var d in deviceService.Devices)
     {
-        if (d is IDeviceWithConfiguration)
-            templates.Add((d as IDeviceWithConfiguration).GetConfigurationTemplate());
+        if (d is IDeviceWithConfiguration) 
+        {
+            try
+            {
+                var template = (d as IDeviceWithConfiguration).GetConfigurationTemplate();
+                templates.Add(template);
+            }
+            catch (Exception x) 
+            {
+                logger.LogError(x, $"Error whle getting configuration template for device: {d.Name} [{d.Id}]");
+            }
+        }
     }
     return Results.Ok(templates);
 });
