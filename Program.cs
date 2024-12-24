@@ -22,23 +22,23 @@ builder.Services.Configure<JsonOptions>(o =>
 
 var serilog = new LoggerConfiguration()
    .WriteTo.Console()
-   .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true))
+   .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true)
    .CreateLogger();
 
 
 ILoggerFactory logger = LoggerFactory.Create(log =>
 {
-    log.AddSerilog(serilog.CreateLogger());
+    log.AddSerilog(serilog);
 
 });
 
-Microsoft.Extensions.Logging.ILogger myLogger = logger.CreateLogger("RIoT2.Net.Node");
+Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net.Node");
 
 //builder.Host.UseSerilog((ctx, lc) => lc
 //    .WriteTo.Console()
 //    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
 
-builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(myLogger);
+builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(nodeLogger);
 builder.Services.AddSingleton<INodeConfigurationService, ConfigurationService>();
 builder.Services.AddSingleton<IMemoryStorageService, MemoryStorageService>();
 builder.Services.AddSingleton<ICommandService, CommandService>();
