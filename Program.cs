@@ -56,13 +56,16 @@ builder.Services.AddHostedService<DeviceSchedulerService>();
 
 var app = builder.Build();
 
-//Plugins
-List<IDevicePlugin> devicePlugins = null;
-var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Plugins"));
-var pluginFiles = pluginDirectory?.GetFiles("*.dll");
+nodeLogger.LogInformation("Services initialized. Starting node.");
 
+
+//Plugins
 try
 {
+    List<IDevicePlugin> devicePlugins = null;
+    var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Plugins"));
+    var pluginFiles = pluginDirectory?.GetFiles("*.dll");
+
     if (pluginFiles != null && pluginFiles.Count() > 0)
     {
         devicePlugins = pluginFiles.SelectMany(pluginFileInfo =>
@@ -73,7 +76,7 @@ try
     }
     else 
     {
-        app.Logger.LogWarning("No Plugins loaded");
+        nodeLogger.LogWarning("No Plugins loaded");
     }
 
     if (devicePlugins != null && devicePlugins.Count() > 0)
@@ -85,7 +88,7 @@ try
 }
 catch(Exception x)
 {
-    app.Logger.LogError(x, "Error while loading device plugins");
+    nodeLogger.LogError(x, $"Error while loading device plugins: {x.Message}");
 }
 
 static Assembly LoadPlugin(string path)

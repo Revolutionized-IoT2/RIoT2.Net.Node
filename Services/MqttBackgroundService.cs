@@ -9,7 +9,7 @@ namespace RIoT2.Net.Node.Services
         private readonly IDeviceService _deviceService;
         private readonly ILogger _logger;
 
-        public MqttBackgroundService(INodeMqttService mqttService, INodeConfigurationService configuration, IDeviceService deviceService, ILogger<MqttBackgroundService> logger)
+        public MqttBackgroundService(INodeMqttService mqttService, INodeConfigurationService configuration, IDeviceService deviceService, ILogger logger)
         {
             _mqttService = mqttService;
             _configuration = configuration;

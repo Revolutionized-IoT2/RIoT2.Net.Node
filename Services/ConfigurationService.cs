@@ -12,7 +12,7 @@ namespace RIoT2.Net.Node.Services
         private DirectoryInfo _configurationFolder;
         private ILogger _logger;
 
-        public ConfigurationService(ILogger<ConfigurationService> logger) 
+        public ConfigurationService(ILogger logger) 
         {
             _logger = logger;
             _configurationFolder = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));

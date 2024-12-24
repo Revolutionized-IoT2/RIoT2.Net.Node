@@ -9,7 +9,7 @@
         "RIOT2_NODE_URL": "https://192.168.0.113:7136",
         "RIOT2_NODE_ID": "5546B84F-E91C-423F-A80F-FF935EEBF27E",
         "RIOT2_MQTT_IP": "192.168.0.30",
-        "RIOT2_MQTT_USERNAME": "user",
+        "RIOT2_MQTT_USERNAME": "edge",
         "RIOT2_MQTT_PASSWORD": "password"
       },
       "applicationUrl": "https://0.0.0.0:7136;http://localhost:5136",
