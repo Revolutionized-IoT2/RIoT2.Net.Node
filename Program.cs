@@ -122,7 +122,6 @@ static IEnumerable<IDevicePlugin> CreateDevicePlugins(Assembly assembly, IServic
             $"Available types: {availableTypes}");
     }
 }
-
 //end Plugins
 
 IHostApplicationLifetime lifetime = app.Lifetime;
@@ -144,6 +143,7 @@ lifetime.ApplicationStarted.Register(async () => {
 
     await mqttService.SendNodeOnlineMessage();
 
+    //TODO create example file for local configuration
 #if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
     app.Services.GetService<INodeConfigurationService>().LoadDeviceConfiguration("", "").Wait();
 #endif
@@ -186,23 +186,32 @@ app.MapPost("/api/webhook/{address}", ([FromBody] object content, string address
     return Results.Ok();
 });
 
-//TODO send this url to orchrestrator when system comes online...
 app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
 {
     List<DeviceConfiguration> templates = new List<DeviceConfiguration>();
     foreach (var d in deviceService.Devices)
     {
-        if (d is IDeviceWithConfiguration) 
+        if (d is IDeviceWithConfiguration)
         {
             try
             {
                 var template = (d as IDeviceWithConfiguration).GetConfigurationTemplate();
                 templates.Add(template);
             }
-            catch (Exception x) 
+            catch (Exception x)
             {
                 logger.LogError(x, $"Error whle getting configuration template for device: {d.Name} [{d.Id}]");
             }
+        }
+        else //Add default configuration template
+        {
+            templates.Add(new DeviceConfiguration()
+            {
+                ClassFullName = d.GetType().FullName,
+                Id = Guid.NewGuid().ToString(),
+                Name = d.GetType().Name,
+                RefreshSchedule = (d is IRefreshableReportDevice) ? "0 * * * *" : null
+            });
         }
     }
     return Results.Ok(templates);
