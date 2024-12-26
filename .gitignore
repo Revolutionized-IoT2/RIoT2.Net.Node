@@ -10,3 +10,4 @@
 /bin/Debug/net8.0
 /appsettings.Development.json
 /*.user
+/Properties/launchSettings.json
