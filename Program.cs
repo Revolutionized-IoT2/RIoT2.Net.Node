@@ -162,6 +162,7 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
 {
     ConfigurationTemplateUrl = url + "/api/device/configuration/templates",
     WebhookUrl = url + "/api/webhook",
+    DeviceStateUrl = url + "/api/device/status"
 };
 
 void _configuration_DeviceConfigurationUpdated()
@@ -186,6 +187,24 @@ app.MapPost("/api/webhook/{address}", ([FromBody] object content, string address
     return Results.Ok();
 });
 
+//Provides state information on each device
+app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
+{
+    List<DeviceStatus> states = new List<DeviceStatus>();
+    foreach (var d in deviceService.Devices)
+    {
+        states.Add(new DeviceStatus() {
+            Id = d.Id,
+            Name = d.Name,
+            Message = d.StateMessage,
+            State = d.State
+        });
+    }
+
+    return Results.Ok(states);
+});
+
+//Provides configuration templates 
 app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
 {
     List<DeviceConfiguration> templates = new List<DeviceConfiguration>();
