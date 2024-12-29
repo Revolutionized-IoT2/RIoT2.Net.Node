@@ -165,10 +165,13 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
     DeviceStateUrl = url + "/api/device/status"
 };
 
+//this is called when node receives a new configuration for devices
 void _configuration_DeviceConfigurationUpdated()
 {
     var deviceService = app.Services.GetRequiredService<IDeviceService>();
-    deviceService.StartAllDevices();
+    deviceService.StopAllDevices();
+    deviceService.ConfigureDevices();
+    deviceService.StartAllDevices(true);
 }
 
 // Configure the HTTP request pipeline.
@@ -190,9 +193,12 @@ app.MapPost("/api/webhook/{address}", ([FromBody] object content, string address
 //Provides state information on each device
 app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
 {
-    List<DeviceStatus> states = new List<DeviceStatus>();
+    List<DeviceStatus> states = [];
     foreach (var d in deviceService.Devices)
     {
+        if (d.State == RIoT2.Core.DeviceState.Unknown)
+            continue;
+
         states.Add(new DeviceStatus() {
             Id = d.Id,
             Name = d.Name,
