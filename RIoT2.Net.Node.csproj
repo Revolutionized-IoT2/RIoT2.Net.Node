@@ -6,6 +6,7 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
 	<InvariantGlobalization>true</InvariantGlobalization>
+	<Configurations>Debug;Release;Local</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +23,6 @@
 
   <ItemGroup>
     <Folder Include="Logs\" />
-	<Folder Include="Plugins\" />
 	<Folder Include="Data\" />
   </ItemGroup>
 
