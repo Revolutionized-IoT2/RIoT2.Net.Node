@@ -235,7 +235,10 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
                 ClassFullName = d.GetType().FullName,
                 Id = Guid.NewGuid().ToString(),
                 Name = d.GetType().Name,
-                RefreshSchedule = (d is IRefreshableReportDevice) ? "0 * * * *" : null
+                RefreshSchedule = (d is IRefreshableReportDevice) ? "0 * * * *" : null,
+                CommandTemplates = (d is ICommandDevice) ? [] : null,
+                ReportTemplates = [],
+                DeviceParameters = []
             });
         }
     }
