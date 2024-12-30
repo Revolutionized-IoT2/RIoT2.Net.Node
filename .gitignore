@@ -11,3 +11,5 @@
 /appsettings.Development.json
 /*.user
 /Properties/launchSettings.json
+/bin
+/RIoT2.Net.Node.csproj.user
