@@ -3,6 +3,7 @@ using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces.Services;
 using System.Reflection;
 using RIoT2.Core.Utils;
+using static System.Net.WebRequestMethods;
 
 namespace RIoT2.Net.Node.Services
 {
@@ -29,7 +30,8 @@ namespace RIoT2.Net.Node.Services
                         Id = Environment.GetEnvironmentVariable("RIOT2_NODE_ID"),
                         MqttServerUrl = Environment.GetEnvironmentVariable("RIOT2_MQTT_IP"),
                         MqttUsername = Environment.GetEnvironmentVariable("RIOT2_MQTT_USERNAME"),
-                        MqttPassword = Environment.GetEnvironmentVariable("RIOT2_MQTT_PASSWORD")
+                        MqttPassword = Environment.GetEnvironmentVariable("RIOT2_MQTT_PASSWORD"),
+                        Url = Environment.GetEnvironmentVariable("RIOT2_NODE_URL")
                     };
                 }
 

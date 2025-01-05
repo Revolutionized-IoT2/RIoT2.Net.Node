@@ -2,13 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using RIoT2.Core.Interfaces;
 using RIoT2.Core.Models;
 using RIoT2.Core.Services;
-using RIoT2.Core.Services.FTP;
 using RIoT2.Core.Interfaces.Services;
 using Serilog;
 using System.Text.Json;
 using System.Reflection;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,89 +40,53 @@ Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net
 
 builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(nodeLogger);
 builder.Services.AddSingleton<INodeConfigurationService, ConfigurationService>();
-builder.Services.AddSingleton<IMemoryStorageService, MemoryStorageService>();
 builder.Services.AddSingleton<ICommandService, CommandService>();
 builder.Services.AddSingleton<IReportService, ReportService>();
 builder.Services.AddSingleton<INodeMqttService, NodeMqttService>();
-builder.Services.AddSingleton<IWebhookService, WebhookService>();
-builder.Services.AddSingleton<IFtpService, FtpService>();
-builder.Services.AddSingleton<IStorageService, FTPStorageService>();
-builder.Services.AddSingleton<IDownloadService, DownloadService>();
-builder.Services.AddSingleton<IAzureRelayService, AzureRelayService>();
 builder.Services.AddSingleton<IDeviceService, DeviceService>();
 builder.Services.AddSingleton<MqttBackgroundService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundService>());
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
-var app = builder.Build();
-
-nodeLogger.LogInformation("Services initialized. Starting node.");
-
-
-//Plugins
+//load plugins
 try
 {
-    List<IDevicePlugin> devicePlugins = null;
     var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Plugins"));
     var pluginFiles = pluginDirectory?.GetFiles("*.dll");
 
     if (pluginFiles != null && pluginFiles.Count() > 0)
     {
-        devicePlugins = pluginFiles.SelectMany(pluginFileInfo =>
+        foreach(var pluginFileInfo in pluginFiles) 
         {
-            Assembly pluginAssembly = LoadPlugin(pluginFileInfo.FullName);
-            return CreateDevicePlugins(pluginAssembly, app.Services);
-        }).ToList();
-    }
-    else 
-    {
-        nodeLogger.LogWarning("No Plugins loaded");
-    }
+            //Load and add controllers
+            PluginLoadContext loadContext = new PluginLoadContext(pluginFileInfo.FullName);
+            Assembly pluginAssembly = loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginFileInfo.FullName));
+            var part = new AssemblyPart(pluginAssembly);
+            builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
 
-    if (devicePlugins != null && devicePlugins.Count() > 0)
+            //Initialize plugin
+            var atypes = pluginAssembly.GetTypes();
+            var pluginClass = atypes.SingleOrDefault(t => t.GetInterface(nameof(IDevicePlugin)) != null);
+            if (pluginClass != null)
+            {
+                var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
+                var obj = Activator.CreateInstance(pluginClass);
+                initMethod.Invoke(obj, new object[] { builder.Services });
+            }
+        }
+    }
+    else
     {
-        var deviceService = app.Services.GetRequiredService<IDeviceService>();
-        foreach (var plugin in devicePlugins)
-            deviceService.Devices.AddRange(plugin.Devices);
+        nodeLogger.LogWarning("No Plugins found!");
     }
 }
-catch(Exception x)
+catch (Exception x)
 {
     nodeLogger.LogError(x, $"Error while loading device plugins: {x.Message}");
 }
 
-static Assembly LoadPlugin(string path)
-{
-    PluginLoadContext loadContext = new PluginLoadContext(path);
-    return loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(path));
-}
-
-static IEnumerable<IDevicePlugin> CreateDevicePlugins(Assembly assembly, IServiceProvider services)
-{
-    int count = 0;
-
-    foreach (Type type in assembly.GetTypes())
-    {
-        if (typeof(IDevicePlugin).IsAssignableFrom(type))
-        {
-            IDevicePlugin result = Activator.CreateInstance(type, services) as IDevicePlugin;
-            if (result != null)
-            {
-                count++;
-                yield return result;
-            }
-        }
-    }
-
-    if (count == 0)
-    {
-        string availableTypes = string.Join(",", assembly.GetTypes().Select(t => t.FullName));
-        throw new ApplicationException(
-            $"Can't find any type which implements IDevicePlugin in {assembly} from {assembly.Location}.\n" +
-            $"Available types: {availableTypes}");
-    }
-}
-//end Plugins
+var app = builder.Build();
+nodeLogger.LogInformation("Services initialized. Starting node.");
 
 IHostApplicationLifetime lifetime = app.Lifetime;
 lifetime.ApplicationStopping.Register(onShutdown);
@@ -144,24 +108,15 @@ lifetime.ApplicationStarted.Register(async () => {
     await mqttService.SendNodeOnlineMessage();
 
     //TODO create example file for local configuration
-#if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
+    #if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
     app.Services.GetService<INodeConfigurationService>().LoadDeviceConfiguration("", "").Wait();
-#endif
+    #endif
+});
 
-
-}
-);
-
-var url = Environment.GetEnvironmentVariable("RIOT2_NODE_URL");
-
-//Configure image service..
-app.Services.GetService<IDownloadService>().SetBaseUrl(url + "/api/image/");
-
-//prepare nodeonline message
+var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
 app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnlineMessage()
 {
     ConfigurationTemplateUrl = url + "/api/device/configuration/templates",
-    WebhookUrl = url + "/api/webhook",
     DeviceStateUrl = url + "/api/device/status"
 };
 
@@ -173,22 +128,6 @@ void _configuration_DeviceConfigurationUpdated()
     deviceService.ConfigureDevices();
     deviceService.StartAllDevices(true);
 }
-
-// Configure the HTTP request pipeline.
-
-/*
-app.MapGet("/todoitems/{id}", async (int id, TodoDb db) =>
-    await db.Todos.FindAsync(id)
-        is Todo todo
-            ? Results.Ok(todo)
-            : Results.NotFound());
-*/
-
-app.MapPost("/api/webhook/{address}", ([FromBody] object content, string address, IWebhookService webhookService) =>
-{
-    webhookService.SetWebhook(address, content.ToString());
-    return Results.Ok();
-});
 
 //Provides state information on each device
 app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
@@ -213,7 +152,7 @@ app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extens
 //Provides configuration templates 
 app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
 {
-    List<DeviceConfiguration> templates = new List<DeviceConfiguration>();
+    List<DeviceConfiguration> templates = [];
     foreach (var d in deviceService.Devices)
     {
         if (d is IDeviceWithConfiguration)
@@ -245,34 +184,12 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
     return Results.Ok(templates);
 });
 
-/*
-app.MapGet("/api/devices", (IDeviceService deviceService) =>
-{
-    return Results.Ok(deviceService.Devices);
-});*/
-
-app.MapGet("/api/image/{filename}", (string filename, IStorageService fileService, IMemoryStorageService memoryStorageService) =>
-{
-    var img = memoryStorageService.Get(filename);
-
-    if (img == null && fileService.IsConfigured())
-        img = fileService.Get(filename).Result;
-
-    if (img == null)
-        return Results.NotFound();
-
-    return Results.File(img.Data, "image/jpeg");
-});
-
 if (builder.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
 }
 
-//app.UseHttpsRedirection();
-
-//app.UseAuthorization();
-
-//app.MapControllers();
+//Run this to map plugin controllers as well
+app.MapControllers();
 
 app.Run();
