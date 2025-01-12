@@ -32,5 +32,5 @@ jobs:
          docker buildx build --push -t ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8 -t ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}-arm64v8 -f ./Dockerfile_Arm64 . --build-arg NUGET_AUTH_TOKEN=${{ secrets.NUGET_PACKAGE_TOKEN }} --platform=linux/arm64
          docker push ghcr.io/revolutionized-iot2/riot2-node:latest
          docker push ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}
-         docker push ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8
+         docker image ls
          docker push ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}-arm64v8
