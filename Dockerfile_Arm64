@@ -7,7 +7,7 @@ ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
 
 # This stage is used to build the service project
-FROM --platform=linux/arm64 mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM --platform=linux/amd64 mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG NUGET_AUTH_TOKEN=token
 ARG NUGET_URL=https://nuget.pkg.github.com/Revolutionized-IoT2/index.json
