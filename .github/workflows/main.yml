@@ -16,7 +16,7 @@ jobs:
          docker buildx create --use
       - name: set up qemu
         run: |
-         docker run -it --rm --privileged tonistiigi/binfmt --install all
+         docker run --rm --privileged tonistiigi/binfmt --install all
         
       -
         name: Login to GitHub Container Registry
