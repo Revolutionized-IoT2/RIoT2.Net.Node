@@ -1,7 +1,7 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-arm64v8 AS base
 WORKDIR /app
-RUN apk add --no-cache tzdata
+RUN apk add --upgrade --no-cache tzdata
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
