@@ -22,7 +22,7 @@ RUN dotnet build "./RIoT2.Net.Node.csproj" -c $BUILD_CONFIGURATION -a arm64 -o /
 # This stage is used to publish the service project to be copied to the final stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./RIoT2.Net.Node.csproj" -c $BUILD_CONFIGURATION -a arm64 -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./RIoT2.Net.Node.csproj" -c $BUILD_CONFIGURATION -a arm64 --no-restore -o /app/publish /p:UseAppHost=false
 
 # This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
 FROM base AS final
