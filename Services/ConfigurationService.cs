@@ -46,7 +46,7 @@ namespace RIoT2.Net.Node.Services
             {
                 var localConfigFile = loadConfigurationFile("Data/local.configuration.json");
                 byte[] result;
-                using (FileStream SourceStream = File.Open(localConfigFile.FullName, FileMode.Open))
+                using (FileStream SourceStream = System.IO.File.Open(localConfigFile.FullName, FileMode.Open))
                 {
                     result = new byte[SourceStream.Length];
                     await SourceStream.ReadAsync(result, 0, (int)SourceStream.Length);

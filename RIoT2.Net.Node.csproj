@@ -70,7 +70,7 @@
     <None Update="Plugins\Microsoft.IdentityModel.Tokens.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Plugins\RIoT2.Net.Devices.dll">
+    <None Update="Plugins\RIoT2.Net.Devices.bak">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Plugins\System.CodeDom.dll">

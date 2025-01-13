@@ -48,6 +48,8 @@ builder.Services.AddSingleton<MqttBackgroundService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundService>());
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
+var pluginsLoaded = false;
+
 //load plugins
 try
 {
@@ -61,31 +63,39 @@ try
             //Load and add controllers
             PluginLoadContext loadContext = new PluginLoadContext(pluginFileInfo.FullName);
             Assembly pluginAssembly = loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginFileInfo.FullName));
-            var part = new AssemblyPart(pluginAssembly);
-            builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
 
             //Initialize plugin
             var atypes = pluginAssembly.GetTypes();
             var pluginClass = atypes.SingleOrDefault(t => t.GetInterface(nameof(IDevicePlugin)) != null);
             if (pluginClass != null)
             {
+                //load controllers
+                var part = new AssemblyPart(pluginAssembly);
+                builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
+
+                //load plugin itself
                 var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
                 var obj = Activator.CreateInstance(pluginClass);
                 initMethod.Invoke(obj, new object[] { builder.Services });
+                pluginsLoaded = true;
             }
         }
-    }
-    else
-    {
-        nodeLogger.LogWarning("No Plugins found!");
     }
 }
 catch (Exception x)
 {
     nodeLogger.LogError(x, $"Error while loading device plugins: {x.Message}");
+    pluginsLoaded = false;
+}
+
+if (!pluginsLoaded)
+{
+    nodeLogger.LogCritical("No plugins loaded. Terminating node...");
+    Environment.Exit(-1);
 }
 
 var app = builder.Build();
+
 nodeLogger.LogInformation("Services initialized. Starting node.");
 
 IHostApplicationLifetime lifetime = app.Lifetime;
