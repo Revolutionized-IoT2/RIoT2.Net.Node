@@ -9,6 +9,7 @@ using System.Reflection;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using static System.Net.Mime.MediaTypeNames;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,8 @@ builder.Services.AddHostedService<DeviceSchedulerService>();
 
 var pluginsLoaded = false;
 
+var deviceList = new List<IDevice>();
+
 //load plugins
 try
 {
@@ -74,9 +77,12 @@ try
                 builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
 
                 //load plugin itself
+
+
                 var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
-                var obj = Activator.CreateInstance(pluginClass);
+                var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
                 initMethod.Invoke(obj, new object[] { builder.Services });
+                deviceList.AddRange(obj.Devices);
                 pluginsLoaded = true;
             }
         }
@@ -97,6 +103,10 @@ if (!pluginsLoaded)
 var app = builder.Build();
 
 nodeLogger.LogInformation("Services initialized. Starting node.");
+
+var deviceService = app.Services.GetRequiredService<IDeviceService>();
+deviceService.Devices.AddRange(deviceList);
+nodeLogger.LogInformation($"Following devices loaded for the node: {string.Join(", ", deviceList.Select(x => x.Name))}");
 
 IHostApplicationLifetime lifetime = app.Lifetime;
 lifetime.ApplicationStopping.Register(onShutdown);
