@@ -1,8 +1,7 @@
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine-arm64v8 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-bookworm-slim-arm64v8 AS base
 WORKDIR /app
 RUN apk add --upgrade --no-cache tzdata
-RUN apt-get install -y qemu gcc-aarch64-linux-gnu
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
