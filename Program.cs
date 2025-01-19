@@ -106,7 +106,7 @@ nodeLogger.LogInformation("Services initialized. Starting node.");
 
 var deviceService = app.Services.GetRequiredService<IDeviceService>();
 deviceService.Devices.AddRange(deviceList);
-nodeLogger.LogInformation($"Following devices loaded for the node: {string.Join(", ", deviceList.Select(x => x.Name))}");
+nodeLogger.LogInformation($"Following devices loaded for the node: {string.Join(", ", deviceList.Select(x => x.Name).ToList())}");
 
 IHostApplicationLifetime lifetime = app.Lifetime;
 lifetime.ApplicationStopping.Register(onShutdown);
