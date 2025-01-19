@@ -20,7 +20,6 @@
     <PackageReference Include="RIoT2.Core" Version="0.1.10" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -71,7 +70,7 @@
     <None Update="Plugins\Microsoft.IdentityModel.Tokens.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Plugins\RIoT2.Net.Devices.bak">
+    <None Update="Plugins\RIoT2.Net.Devices.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Plugins\System.CodeDom.dll">
