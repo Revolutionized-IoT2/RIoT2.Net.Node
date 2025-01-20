@@ -209,6 +209,13 @@ if (builder.Environment.IsDevelopment())
 }
 
 //Run this to map plugin controllers as well
-app.MapControllers();
+try
+{
+    app.MapControllers();
+}
+catch (Exception x) 
+{
+    nodeLogger.LogError($"Error in mapping controllers: {x.Message}", x.Message);
+}
 
 app.Run();
