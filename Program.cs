@@ -188,7 +188,7 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
             }
             catch (Exception x)
             {
-                logger.LogError(x, $"Error whle getting configuration template for device: {d.Name} [{d.Id}]");
+                logger.LogError(x, $"Error while getting configuration template for device: {d.Name} [{d.Id}]");
             }
         }
         else //Add default configuration template
