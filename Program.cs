@@ -71,18 +71,23 @@ try
             var pluginClass = atypes.SingleOrDefault(t => t.GetInterface(nameof(IDevicePlugin)) != null);
             if (pluginClass != null)
             {
-                //load controllers
-                var part = new AssemblyPart(pluginAssembly);
-                builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
+                try
+                {
+                    //load controllers
+                    var part = new AssemblyPart(pluginAssembly);
+                    builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
 
-                //load plugin itself
-
-
-                var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
-                var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
-                initMethod.Invoke(obj, new object[] { builder.Services });
-                deviceList.AddRange(obj.Devices);
-                pluginsLoaded = true;
+                    //load plugin itself
+                    var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
+                    var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
+                    initMethod.Invoke(obj, new object[] { builder.Services });
+                    deviceList.AddRange(obj.Devices);
+                    pluginsLoaded = true;
+                }
+                catch (Exception x) 
+                {
+                    nodeLogger.LogError(x, $"Failed loading plugin {pluginClass.GetType().FullName}: {x.Message}");
+                }
             }
         }
     }
