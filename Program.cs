@@ -121,20 +121,21 @@ void onShutdown() //this code is called when the application stops
     mqttService.StopAsync(default).Wait();
 }
 
-var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
+//var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
 
 //Call nodeonline message once application has fully started
-lifetime.ApplicationStarted.Register(async () => {
+lifetime.ApplicationStarted.Register(() => {
 
     var configuration = app.Services.GetRequiredService<INodeConfigurationService>();
     configuration.DeviceConfigurationUpdated += _configuration_DeviceConfigurationUpdated;
 
-    await mqttService.SendNodeOnlineMessage();
+    //Orchestrator online message is retained -> no need to send online message here
+    //await mqttService.SendNodeOnlineMessage();
 
     //TODO create example file for local configuration
-    #if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
+#if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
     app.Services.GetService<INodeConfigurationService>().LoadDeviceConfiguration("", "").Wait();
-    #endif
+#endif
 });
 
 var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
