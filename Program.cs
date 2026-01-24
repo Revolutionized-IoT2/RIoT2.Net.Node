@@ -141,8 +141,7 @@ lifetime.ApplicationStarted.Register(() => {
 var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
 app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnlineMessage()
 {
-    ConfigurationTemplateUrl = url + "/api/device/configuration/templates",
-    DeviceStateUrl = url + "/api/device/status"
+    NodeBaseUrl = url
 };
 
 //this is called when node receives a new configuration for devices
