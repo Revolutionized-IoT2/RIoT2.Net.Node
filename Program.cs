@@ -147,8 +147,7 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
 {
     NodeBaseUrl = url,
     NodeType = NodeType.Device,
-    IsOnline = true,
-    Name = "RIoT2 Device Node",
+    IsOnline = true
 };
 
 //this is called when node receives a new configuration for devices
