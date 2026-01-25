@@ -9,6 +9,7 @@ using System.Reflection;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using RIoT2.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -121,16 +122,19 @@ void onShutdown() //this code is called when the application stops
     mqttService.StopAsync(default).Wait();
 }
 
-//var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
+var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
 
 //Call nodeonline message once application has fully started
-lifetime.ApplicationStarted.Register(() => {
+lifetime.ApplicationStarted.Register(async () => {
 
     var configuration = app.Services.GetRequiredService<INodeConfigurationService>();
     configuration.DeviceConfigurationUpdated += _configuration_DeviceConfigurationUpdated;
 
-    //Orchestrator online message is retained -> no need to send online message here
-    //await mqttService.SendNodeOnlineMessage();
+    //send node online message, unless we have already received orchestator online command to configure the node
+    if (!configuration.DeviceConfigurationLoaded)
+    {
+        await mqttService.SendNodeOnlineMessage();
+    }
 
     //TODO create example file for local configuration
 #if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
@@ -141,7 +145,10 @@ lifetime.ApplicationStarted.Register(() => {
 var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
 app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnlineMessage()
 {
-    NodeBaseUrl = url
+    NodeBaseUrl = url,
+    NodeType = NodeType.Device,
+    IsOnline = true,
+    Name = "RIoT2 Device Node",
 };
 
 //this is called when node receives a new configuration for devices

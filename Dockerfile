@@ -31,6 +31,7 @@ COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "RIoT2.Net.Node.dll"]
 
 #Set default environment variables
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV RIOT2_MQTT_IP=192.168.0.30
 ENV RIOT2_MQTT_PASSWORD=password
 ENV RIOT2_MQTT_USERNAME=user
