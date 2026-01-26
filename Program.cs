@@ -114,14 +114,6 @@ deviceService.Devices.AddRange(deviceList);
 nodeLogger.LogInformation($"Found {deviceList.Count} devices from plugins.");
 
 IHostApplicationLifetime lifetime = app.Lifetime;
-lifetime.ApplicationStopping.Register(onShutdown);
-
-void onShutdown() //this code is called when the application stops
-{
-    var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
-    mqttService.StopAsync(default).Wait();
-}
-
 var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
 
 //Call nodeonline message once application has fully started
