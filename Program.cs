@@ -49,8 +49,13 @@ builder.Services.AddSingleton<MqttBackgroundService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundService>());
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
-var pluginsLoaded = false;
+var app = builder.Build();
+nodeLogger.LogInformation("Services initialized. Starting node.");
 
+//Install plugins
+app.Services.GetService<INodeConfigurationService>().InstallPluginPackage();
+
+var pluginsLoaded = false;
 var deviceList = new List<IDevice>();
 
 //load plugins
@@ -61,7 +66,7 @@ try
 
     if (pluginFiles != null && pluginFiles.Count() > 0)
     {
-        foreach(var pluginFileInfo in pluginFiles) 
+        foreach (var pluginFileInfo in pluginFiles)
         {
             //Load and add controllers
             PluginLoadContext loadContext = new PluginLoadContext(pluginFileInfo.FullName);
@@ -85,7 +90,7 @@ try
                     deviceList.AddRange(obj.Devices);
                     pluginsLoaded = true;
                 }
-                catch (Exception x) 
+                catch (Exception x)
                 {
                     nodeLogger.LogError(x, $"Failed loading plugin {pluginClass.GetType().FullName}: {x.Message}");
                 }
@@ -99,15 +104,16 @@ catch (Exception x)
     pluginsLoaded = false;
 }
 
-if (!pluginsLoaded)
+if (pluginsLoaded)
+{
+    var package = app.Services.GetService<INodeConfigurationService>().Configuration.InstalledPluginPackage;
+    nodeLogger.LogInformation($"Plugins loaded successfully: {package?.InstalledPackageFilename}. Version: {package?.Version}");
+}
+else 
 {
     nodeLogger.LogCritical("No plugins loaded. Terminating node...");
     Environment.Exit(-1);
 }
-
-var app = builder.Build();
-
-nodeLogger.LogInformation("Services initialized. Starting node.");
 
 var deviceService = app.Services.GetRequiredService<IDeviceService>();
 deviceService.Devices.AddRange(deviceList);
@@ -145,6 +151,37 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
 //this is called when node receives a new configuration for devices
 void _configuration_DeviceConfigurationUpdated()
 {
+    var configurationService = app.Services.GetRequiredService<INodeConfigurationService>();
+    
+    if (!String.IsNullOrEmpty(configurationService.DeviceConfiguration.PluginPackageUrl)) 
+    {
+        try
+        {
+            var pluginPackageMetadata = RIoT2.Core.Utils.Web.GetUrlMetadata(configurationService.DeviceConfiguration.PluginPackageUrl).Result;
+            if(!String.IsNullOrEmpty(pluginPackageMetadata?.ContentDisposition?.FileName))
+            {
+                if (!String.IsNullOrEmpty(configurationService.Configuration?.InstalledPluginPackage?.InstalledPackageFilename) || !pluginsLoaded) 
+                {
+                    if(pluginPackageMetadata.ContentDisposition.FileName != configurationService.Configuration.InstalledPluginPackage.InstalledPackageFilename)
+                    {
+                        nodeLogger.LogWarning($"New plugin package available: {pluginPackageMetadata.ContentDisposition.FileName}. Downloading and saving.");
+                        configurationService.DownloadPluginPackage(pluginPackageMetadata.ContentDisposition.FileName);
+                        nodeLogger.LogWarning($"Exiting to restart node and load new plugin package...");
+                        Environment.Exit(0); //restart node to load new plugin package
+                    }
+                }
+            }
+            else
+            {
+                nodeLogger.LogWarning($"Could not fetch plugin package data from Url: {configurationService.DeviceConfiguration.PluginPackageUrl}");
+            }
+        }
+        catch (Exception x)
+        {
+            nodeLogger.LogError(x, $"Error while getting plugin package metadata: {x.Message}");
+        }
+    }
+
     var deviceService = app.Services.GetRequiredService<IDeviceService>();
     deviceService.StopAllDevices();
     deviceService.ConfigureDevices();

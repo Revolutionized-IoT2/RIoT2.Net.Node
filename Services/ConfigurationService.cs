@@ -3,7 +3,6 @@ using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces.Services;
 using System.Reflection;
 using RIoT2.Core.Utils;
-using static System.Net.WebRequestMethods;
 
 namespace RIoT2.Net.Node.Services
 {
@@ -19,7 +18,7 @@ namespace RIoT2.Net.Node.Services
             _configurationFolder = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
         }
 
-        public NodeConfiguration Configuration 
+        public override NodeConfiguration Configuration 
         {
             get
             {
@@ -33,6 +32,30 @@ namespace RIoT2.Net.Node.Services
                         MqttPassword = Environment.GetEnvironmentVariable("RIOT2_MQTT_PASSWORD"),
                         Url = Environment.GetEnvironmentVariable("RIOT2_NODE_URL")
                     };
+                }
+
+                var pluginManifest = loadConfigurationFile("Plugins/PluginManifest.json");
+                if (pluginManifest != null)
+                {
+                    try
+                    {
+                        byte[] result;
+                        using (FileStream SourceStream = System.IO.File.Open(pluginManifest.FullName, FileMode.Open))
+                        {
+                            result = new byte[SourceStream.Length];
+                            SourceStream.ReadAsync(result, 0, (int)SourceStream.Length).Wait();
+                        }
+                        _configuration.InstalledPluginPackage = Json.DeserializeAutoTypeNameHandling<PluginManifest>(System.Text.Encoding.UTF8.GetString(result));
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError($"Could not load plugin manifest: {e.Message}");
+                        _configuration = null;
+                    }
+                }
+                else 
+                {
+                    _logger.LogWarning("Plugin manifest not found.");
                 }
 
                 return _configuration;
@@ -62,8 +85,7 @@ namespace RIoT2.Net.Node.Services
         }
 #endif
 
-        public string ApplicationFolder { get { return _configurationFolder.FullName; } }
-
+        public override string ApplicationFolder { get { return _configurationFolder.FullName; } }
 
         private FileInfo loadConfigurationFile(string filename)
         {
