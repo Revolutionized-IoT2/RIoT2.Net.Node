@@ -33,33 +33,39 @@ namespace RIoT2.Net.Node.Services
                         Url = Environment.GetEnvironmentVariable("RIOT2_NODE_URL")
                     };
                 }
-
-                var pluginManifest = loadConfigurationFile("Plugins/PluginManifest.json");
-                if (pluginManifest != null)
-                {
-                    try
-                    {
-                        byte[] result;
-                        using (FileStream SourceStream = System.IO.File.Open(pluginManifest.FullName, FileMode.Open))
-                        {
-                            result = new byte[SourceStream.Length];
-                            SourceStream.ReadAsync(result, 0, (int)SourceStream.Length).Wait();
-                        }
-                        _configuration.InstalledPluginPackage = Json.DeserializeAutoTypeNameHandling<PluginManifest>(System.Text.Encoding.UTF8.GetString(result));
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError($"Could not load plugin manifest: {e.Message}");
-                        _configuration = null;
-                    }
-                }
-                else 
-                {
-                    _logger.LogWarning("Plugin manifest not found.");
-                }
+                _configuration.PluginManifest = loadManifest("Plugins/PluginManifest.json");
+                _configuration.NodeManifest = loadManifest("Data/Manifest.json");
 
                 return _configuration;
             }
+        }
+
+        private PackageManifest loadManifest(string manifestFilename) 
+        {
+            var manifest = loadConfigurationFile(manifestFilename);
+            if (manifest != null)
+            {
+                try
+                {
+                    byte[] result;
+                    using (FileStream SourceStream = System.IO.File.Open(manifest.FullName, FileMode.Open))
+                    {
+                        result = new byte[SourceStream.Length];
+                        SourceStream.ReadAsync(result, 0, (int)SourceStream.Length).Wait();
+                    }
+                    return Json.DeserializeAutoTypeNameHandling<PackageManifest>(System.Text.Encoding.UTF8.GetString(result));
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Could not load manifest: {e.Message}");
+                    _configuration = null;
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Plugin manifest not found.");
+            }
+            return null;
         }
 
 #if DEBUG

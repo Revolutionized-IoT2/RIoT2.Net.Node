@@ -106,13 +106,13 @@ catch (Exception x)
 
 if (pluginsLoaded)
 {
-    var package = app.Services.GetService<INodeConfigurationService>().Configuration.InstalledPluginPackage;
+    var package = app.Services.GetService<INodeConfigurationService>().Configuration.PluginManifest;
     nodeLogger.LogInformation($"Plugins loaded successfully: {package?.InstalledPackageFilename}. Version: {package?.Version}");
 }
 else 
 {
     nodeLogger.LogCritical("No plugins loaded. Terminating node...");
-    Environment.Exit(-1);
+    Environment.Exit(0);
 }
 
 var deviceService = app.Services.GetRequiredService<IDeviceService>();
@@ -160,14 +160,14 @@ void _configuration_DeviceConfigurationUpdated()
             var pluginPackageMetadata = RIoT2.Core.Utils.Web.GetUrlMetadata(configurationService.DeviceConfiguration.PluginPackageUrl).Result;
             if(!String.IsNullOrEmpty(pluginPackageMetadata?.ContentDisposition?.FileName))
             {
-                if (!String.IsNullOrEmpty(configurationService.Configuration?.InstalledPluginPackage?.InstalledPackageFilename) || !pluginsLoaded) 
+                if (!String.IsNullOrEmpty(configurationService.Configuration?.PluginManifest?.InstalledPackageFilename) || !pluginsLoaded) 
                 {
-                    if(pluginPackageMetadata.ContentDisposition.FileName != configurationService.Configuration.InstalledPluginPackage.InstalledPackageFilename)
+                    if(pluginPackageMetadata.ContentDisposition.FileName != configurationService.Configuration.PluginManifest.InstalledPackageFilename)
                     {
                         nodeLogger.LogWarning($"New plugin package available: {pluginPackageMetadata.ContentDisposition.FileName}. Downloading and saving.");
                         configurationService.DownloadPluginPackage(pluginPackageMetadata.ContentDisposition.FileName);
                         nodeLogger.LogWarning($"Exiting to restart node and load new plugin package...");
-                        Environment.Exit(0); //restart node to load new plugin package
+                        app.Lifetime.StopApplication();  //restart node to load new plugin package
                     }
                 }
             }
@@ -188,6 +188,16 @@ void _configuration_DeviceConfigurationUpdated()
     deviceService.StartAllDevices(true);
 }
 
+app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>
+{
+    return Results.Ok(configuration.Configuration.NodeManifest);
+});
+
+app.MapGet("/api/node/plugin/manifest", (INodeConfigurationService configuration) =>
+{
+    return Results.Ok(configuration.Configuration.PluginManifest);
+});
+
 //Provides state information on each device
 app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
 {
@@ -196,7 +206,7 @@ app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extens
     {
         if (d.State == RIoT2.Core.DeviceState.Unknown)
             continue;
-
+       
         states.Add(new DeviceStatus() {
             Id = d.Id,
             Name = d.Name,
