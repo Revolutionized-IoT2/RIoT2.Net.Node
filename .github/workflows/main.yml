@@ -31,13 +31,13 @@ jobs:
 
       - name: Create Manifest_latest.json file
         run: |
-          cat <<EOF > /home/Manifest_latest.json
+          cat <<EOF > /home/runner/work/_temp/Manifest_latest.json
           { "name": "RIoT2 Docker Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:latest" }
           EOF
 
       - name: Create Manifest_rev.json file
         run: |
-          cat <<EOF > /home/Manifest_rev.json
+          cat <<EOF > /home/runner/work/_temp/Manifest_rev.json
           { "name": "RIoT2 Docker Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}" }
           EOF
 
@@ -52,11 +52,11 @@ jobs:
          docker build -t ghcr.io/revolutionized-iot2/riot2-node:latest -t ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }} . --build-arg NUGET_AUTH_TOKEN=${{ secrets.NUGET_PACKAGE_TOKEN }}
          
          docker create --name temp_container ghcr.io/revolutionized-iot2/riot2-node:latest
-         docker cp /home/Manifest_latest.json temp_container:/app/Data/Manifest.json
+         docker cp /home/runner/work/_temp/Manifest_latest.json temp_container:/app/Data/Manifest.json
          docker commit temp_container ghcr.io/revolutionized-iot2/riot2-node:latest
 
          docker create --name temp_container2 ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}
-         docker cp /home/Manifest_rev.json temp_container2:/app/Data/Manifest.json
+         docker cp /home/runner/work/_temp/Manifest_rev.json temp_container2:/app/Data/Manifest.json
          docker commit temp_container2 ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}
 
          docker push ghcr.io/revolutionized-iot2/riot2-node:latest
