@@ -1,21 +1,17 @@
 ﻿using RIoT2.Core.Models;
 using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces.Services;
-using System.Reflection;
-using RIoT2.Core.Utils;
 
 namespace RIoT2.Net.Node.Services
 {
     internal class ConfigurationService : NodeConfigurationServiceBase, INodeConfigurationService
     {
         private NodeConfiguration _configuration;
-        private DirectoryInfo _configurationFolder;
         private ILogger _logger;
 
         public ConfigurationService(ILogger logger) 
         {
             _logger = logger;
-            _configurationFolder = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
         }
 
         public override NodeConfiguration Configuration 
@@ -27,46 +23,21 @@ namespace RIoT2.Net.Node.Services
                     _configuration = new NodeConfiguration()
                     {
                         Id = Environment.GetEnvironmentVariable("RIOT2_NODE_ID"),
-                        MqttServerUrl = Environment.GetEnvironmentVariable("RIOT2_MQTT_IP"),
-                        MqttUsername = Environment.GetEnvironmentVariable("RIOT2_MQTT_USERNAME"),
-                        MqttPassword = Environment.GetEnvironmentVariable("RIOT2_MQTT_PASSWORD"),
-                        Url = Environment.GetEnvironmentVariable("RIOT2_NODE_URL")
+                        Url = Environment.GetEnvironmentVariable("RIOT2_NODE_URL"),
+                        Mqtt = new MqttConfiguration()
+                        {
+                            ClientId = Environment.GetEnvironmentVariable("RIOT2_NODE_ID"),
+                            ServerUrl = Environment.GetEnvironmentVariable("RIOT2_MQTT_IP"),
+                            Username = Environment.GetEnvironmentVariable("RIOT2_MQTT_USERNAME"),
+                            Password = Environment.GetEnvironmentVariable("RIOT2_MQTT_PASSWORD")
+                        },
                     };
                 }
-                _configuration.PluginManifest = loadManifest("Plugins/PluginManifest.json");
-                _configuration.NodeManifest = loadManifest("Data/Manifest.json");
-
                 return _configuration;
             }
         }
 
-        private PackageManifest loadManifest(string manifestFilename) 
-        {
-            var manifest = loadConfigurationFile(manifestFilename);
-            if (manifest != null)
-            {
-                try
-                {
-                    byte[] result;
-                    using (FileStream SourceStream = System.IO.File.Open(manifest.FullName, FileMode.Open))
-                    {
-                        result = new byte[SourceStream.Length];
-                        SourceStream.ReadAsync(result, 0, (int)SourceStream.Length).Wait();
-                    }
-                    return Json.DeserializeAutoTypeNameHandling<PackageManifest>(System.Text.Encoding.UTF8.GetString(result));
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Could not load manifest: {e.Message}");
-                    _configuration = null;
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Plugin manifest not found.");
-            }
-            return null;
-        }
+      
 
 #if DEBUG
         public override async Task LoadDeviceConfiguration(string json, string id) 
@@ -91,11 +62,9 @@ namespace RIoT2.Net.Node.Services
         }
 #endif
 
-        public override string ApplicationFolder { get { return _configurationFolder.FullName; } }
-
         private FileInfo loadConfigurationFile(string filename)
         {
-            var fullPath = Path.Combine(ApplicationFolder, filename);
+            var fullPath = Path.Combine(Configuration.ApplicationFolder, filename);
             FileInfo f = new FileInfo(fullPath);
 
             if(!f.Exists)

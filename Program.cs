@@ -190,7 +190,7 @@ void _configuration_DeviceConfigurationUpdated()
 
 app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>
 {
-    return Results.Ok(configuration.Configuration.NodeManifest);
+    return Results.Ok(configuration.Configuration.Manifest);
 });
 
 app.MapGet("/api/node/plugin/manifest", (INodeConfigurationService configuration) =>
