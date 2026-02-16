@@ -50,7 +50,7 @@ builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundServic
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
 var app = builder.Build();
-nodeLogger.LogInformation("Services initialized. Starting node.");
+nodeLogger.LogInformation($"Services initialized. {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Name} - {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Version}");
 
 //Install plugins
 app.Services.GetService<INodeConfigurationService>().InstallPluginPackage();

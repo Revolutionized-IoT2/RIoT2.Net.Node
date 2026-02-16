@@ -41,9 +41,30 @@ jobs:
           { "name": "RIoT2 Docker Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}" }
           EOF
 
+      - name: Create Manifest_latestArm.json file
+        run: |
+          cat <<EOF > /home/runner/work/_temp/Manifest_latestArm.json
+          { "name": "RIoT2 Docker Node (ARM64)", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8" }
+          EOF
+
+      - name: Create Manifest_revArm.json file
+        run: |
+          cat <<EOF > /home/runner/work/_temp/Manifest_revArm.json
+          { "name": "RIoT2 Docker Node (ARM64)", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}-arm64v8" }
+          EOF
+
       - name: Build the ARM64 Docker images
         run: |
          docker buildx build -o type=docker -t ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8 -t ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}-arm64v8 -f ./Dockerfile_Arm64 . --build-arg NUGET_AUTH_TOKEN=${{ secrets.NUGET_PACKAGE_TOKEN }} --platform=linux/arm64
+         
+         docker create --name temp_container_arm ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8
+         docker cp /home/runner/work/_temp/Manifest_latestArm.json temp_container_arm:/app/Data/Manifest.json
+         docker commit temp_container_arm ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8
+
+         docker create --name temp_container_arm2 ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}-arm64v8
+         docker cp /home/runner/work/_temp/Manifest_revArm.json temp_container_arm2:/app/Data/Manifest.json
+         docker commit temp_container_arm2 ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}-arm64v8
+         
          docker push ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8
          docker push ghcr.io/revolutionized-iot2/riot2-node:${{ github.ref_name }}-arm64v8
 
