@@ -153,6 +153,7 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
 //this is called when node receives a new configuration for devices
 void _configuration_DeviceConfigurationUpdated()
 {
+    nodeLogger.LogInformation("Device configuration updated.");
     var configurationService = app.Services.GetRequiredService<INodeConfigurationService>();
     
     if (!String.IsNullOrEmpty(configurationService.DeviceConfiguration.PluginPackageUrl)) 
@@ -185,9 +186,11 @@ void _configuration_DeviceConfigurationUpdated()
     }
 
     var deviceService = app.Services.GetRequiredService<IDeviceService>();
+    nodeLogger.LogInformation("Re-starting all devices...");
     deviceService.StopAllDevices();
     deviceService.ConfigureDevices();
     deviceService.StartAllDevices(true);
+    nodeLogger.LogInformation("Running");
 }
 
 app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>
