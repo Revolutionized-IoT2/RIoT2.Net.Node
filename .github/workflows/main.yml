@@ -32,25 +32,25 @@ jobs:
       - name: Create Manifest_latest.json file
         run: |
           cat <<EOF > /home/runner/work/_temp/Manifest_latest.json
-          { "name": "RIoT2 Docker Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:latest" }
+          { "name": "RIoT2 Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:latest" }
           EOF
 
       - name: Create Manifest_rev.json file
         run: |
           cat <<EOF > /home/runner/work/_temp/Manifest_rev.json
-          { "name": "RIoT2 Docker Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}" }
+          { "name": "RIoT2 Node", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}" }
           EOF
 
       - name: Create Manifest_latestArm.json file
         run: |
           cat <<EOF > /home/runner/work/_temp/Manifest_latestArm.json
-          { "name": "RIoT2 Docker Node (ARM64)", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8" }
+          { "name": "RIoT2 Node (ARM64)", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:latest-arm64v8" }
           EOF
 
       - name: Create Manifest_revArm.json file
         run: |
           cat <<EOF > /home/runner/work/_temp/Manifest_revArm.json
-          { "name": "RIoT2 Docker Node (ARM64)", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}-arm64v8" }
+          { "name": "RIoT2 Node (ARM64)", "date": "${{env.NOW}}", "version": "${{github.ref_name}}", "installedPackageFilename": "ghcr.io/revolutionized-iot2/riot2-node:${{github.ref_name}}-arm64v8" }
           EOF
 
       - name: Build the ARM64 Docker images

@@ -145,7 +145,9 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
 {
     NodeBaseUrl = url,
     NodeType = NodeType.Device,
-    IsOnline = true
+    IsOnline = true,
+    Manifest = app.Services.GetService<INodeConfigurationService>().Configuration.Manifest,
+    PluginManifest = app.Services.GetService<INodeConfigurationService>().Configuration.PluginManifest
 };
 
 //this is called when node receives a new configuration for devices
