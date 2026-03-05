@@ -1,15 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
-using RIoT2.Core.Interfaces;
-using RIoT2.Core.Models;
-using RIoT2.Core.Services;
-using RIoT2.Core.Interfaces.Services;
-using Serilog;
-using System.Text.Json;
-using System.Reflection;
-using RIoT2.Net.Node;
-using RIoT2.Net.Node.Services;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using RIoT2.Core;
+using RIoT2.Core.Interfaces;
+using RIoT2.Core.Interfaces.Services;
+using RIoT2.Core.Models;
+using RIoT2.Core.Services;
+using RIoT2.Net.Node;
+using RIoT2.Net.Node.Services;
+using Serilog;
+using System.Reflection;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,8 +39,10 @@ Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net
 //    .WriteTo.Console()
 //    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
 
+var _configurationService = new ConfigurationService(nodeLogger);
+
 builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(nodeLogger);
-builder.Services.AddSingleton<INodeConfigurationService, ConfigurationService>();
+builder.Services.AddSingleton<INodeConfigurationService>(_configurationService);
 builder.Services.AddSingleton<ICommandService, CommandService>();
 builder.Services.AddSingleton<IReportService, ReportService>();
 builder.Services.AddSingleton<INodeMqttService, NodeMqttService>();
@@ -49,75 +51,28 @@ builder.Services.AddSingleton<MqttBackgroundService>();
 builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundService>());
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
-var app = builder.Build();
-nodeLogger.LogInformation($"Services initialized. {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Name} - {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Version}");
-
-//Install plugins
-app.Services.GetService<INodeConfigurationService>().InstallPluginPackage();
-
 var pluginsLoaded = false;
 var deviceList = new List<IDevice>();
 
-//load plugins
-try
-{
-    var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Plugins"));
-    var pluginFiles = pluginDirectory?.GetFiles("*.dll");
+_configurationService.InstallPluginPackage();
+loadPlugins();
 
-    if (pluginFiles != null && pluginFiles.Count() > 0)
-    {
-        foreach (var pluginFileInfo in pluginFiles)
-        {
-            //Load and add controllers
-            PluginLoadContext loadContext = new PluginLoadContext(pluginFileInfo.FullName);
-            Assembly pluginAssembly = loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginFileInfo.FullName));
-
-            //Initialize plugin
-            var atypes = pluginAssembly.GetTypes();
-            var pluginClass = atypes.SingleOrDefault(t => t.GetInterface(nameof(IDevicePlugin)) != null);
-            if (pluginClass != null)
-            {
-                try
-                {
-                    //load controllers
-                    var part = new AssemblyPart(pluginAssembly);
-                    builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
-
-                    //load plugin itself
-                    var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
-                    var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
-                    initMethod.Invoke(obj, new object[] { builder.Services });
-                    deviceList.AddRange(obj.Devices);
-                    pluginsLoaded = true;
-                }
-                catch (Exception x)
-                {
-                    nodeLogger.LogError(x, $"Failed loading plugin {pluginClass.GetType().FullName}: {x.Message}");
-                }
-            }
-        }
-    }
-}
-catch (Exception x)
-{
-    nodeLogger.LogError(x, $"Error while loading device plugins: {x.Message}");
-    pluginsLoaded = false;
-}
+var app = builder.Build();
+nodeLogger.LogInformation($"Services initialized. {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Name??"n/a"} - {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Version??"n/a"}");
 
 if (pluginsLoaded)
 {
     var package = app.Services.GetService<INodeConfigurationService>().Configuration.PluginManifest;
     nodeLogger.LogInformation($"Plugins loaded successfully: {package?.InstalledPackageFilename}. Version: {package?.Version}");
-}
-else 
-{
-    nodeLogger.LogCritical("No plugins loaded. Terminating node...");
-    Environment.Exit(0);
-}
 
-var deviceService = app.Services.GetRequiredService<IDeviceService>();
-deviceService.Devices.AddRange(deviceList);
-nodeLogger.LogInformation($"Found {deviceList.Count} devices from plugins.");
+    var deviceService = app.Services.GetRequiredService<IDeviceService>();
+    deviceService.Devices.AddRange(deviceList);
+    nodeLogger.LogInformation($"Found {deviceList.Count} devices from plugins.");
+}
+else
+{
+    nodeLogger.LogCritical("NO PLUGINS LOADED. Starting without plugins...");
+}
 
 IHostApplicationLifetime lifetime = app.Lifetime;
 var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
@@ -146,29 +101,78 @@ app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnl
     NodeBaseUrl = url,
     NodeType = NodeType.Device,
     IsOnline = true,
-    Manifest = app.Services.GetService<INodeConfigurationService>().Configuration.Manifest,
-    PluginManifest = app.Services.GetService<INodeConfigurationService>().Configuration.PluginManifest
+    Manifest = app.Services.GetService<INodeConfigurationService>().Configuration?.Manifest,
+    PluginManifest = app.Services.GetService<INodeConfigurationService>().Configuration?.PluginManifest
 };
+
+void loadPlugins()
+{
+    nodeLogger.LogInformation("Trying to load plugins...");
+    try
+    {
+        var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Plugins"));
+        var pluginFiles = pluginDirectory?.GetFiles("*.dll");
+
+        if (pluginFiles != null && pluginFiles.Count() > 0)
+        {
+            foreach (var pluginFileInfo in pluginFiles)
+            {
+                //Load and add controllers
+                PluginLoadContext loadContext = new PluginLoadContext(pluginFileInfo.FullName);
+                Assembly pluginAssembly = loadContext.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginFileInfo.FullName));
+
+                //Initialize plugin
+                var atypes = pluginAssembly.GetTypes();
+                var pluginClass = atypes.SingleOrDefault(t => t.GetInterface(nameof(IDevicePlugin)) != null);
+                if (pluginClass != null)
+                {
+                    try
+                    {
+                        //load controllers
+                        var part = new AssemblyPart(pluginAssembly);
+                        builder.Services.AddControllers().PartManager.ApplicationParts.Add(part);
+
+                        //load plugin itself
+                        var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
+                        var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
+                        initMethod.Invoke(obj, new object[] { builder.Services });
+                        deviceList.AddRange(obj.Devices);
+                        pluginsLoaded = true;
+                    }
+                    catch (Exception x)
+                    {
+                        nodeLogger.LogError(x, $"Failed loading plugin {pluginClass.GetType().FullName}: {x.Message}");
+                    }
+                }
+            }
+        }
+    }
+    catch (Exception x)
+    {
+        nodeLogger.LogError(x, $"Error while loading device plugins: {x.Message}");
+        pluginsLoaded = false;
+    }
+}
 
 //this is called when node receives a new configuration for devices
 void _configuration_DeviceConfigurationUpdated()
 {
     nodeLogger.LogInformation("Device configuration updated.");
     var configurationService = app.Services.GetRequiredService<INodeConfigurationService>();
-    
-    if (!String.IsNullOrEmpty(configurationService.DeviceConfiguration.PluginPackageUrl)) 
+
+    if (!String.IsNullOrEmpty(configurationService?.DeviceConfiguration?.PluginPackageUrl))
     {
         try
         {
             var pluginPackageMetadata = RIoT2.Core.Utils.Web.GetUrlMetadata(configurationService.DeviceConfiguration.PluginPackageUrl).Result;
-            if(!String.IsNullOrEmpty(pluginPackageMetadata?.ContentDisposition?.FileName))
+            if (!String.IsNullOrEmpty(pluginPackageMetadata?.ContentDisposition?.FileName))
             {
-                if (!String.IsNullOrEmpty(configurationService.Configuration?.PluginManifest?.InstalledPackageFilename) || !pluginsLoaded) 
+                if (!String.IsNullOrEmpty(configurationService.Configuration?.PluginManifest?.InstalledPackageFilename) || !pluginsLoaded)
                 {
-                    if(pluginPackageMetadata.ContentDisposition.FileName != configurationService.Configuration.PluginManifest.InstalledPackageFilename)
+                    if (pluginPackageMetadata.ContentDisposition.FileName != configurationService.Configuration?.PluginManifest?.InstalledPackageFilename)
                     {
-                        nodeLogger.LogWarning($"New plugin package available: {pluginPackageMetadata.ContentDisposition.FileName}. Downloading and saving.");
-                        configurationService.DownloadPluginPackage(pluginPackageMetadata.ContentDisposition.FileName);
+                        nodeLogger.LogInformation($"New plugin package available: {pluginPackageMetadata.ContentDisposition.FileName}. Downloading and saving.");
+                        configurationService.DownloadPluginPackage(configurationService.DeviceConfiguration.PluginPackageUrl);
                         nodeLogger.LogWarning($"Exiting to restart node and load new plugin package...");
                         app.Lifetime.StopApplication();  //restart node to load new plugin package
                     }
@@ -183,6 +187,10 @@ void _configuration_DeviceConfigurationUpdated()
         {
             nodeLogger.LogError(x, $"Error while getting plugin package metadata: {x.Message}");
         }
+    }
+    else 
+    {
+        nodeLogger.LogWarning("Could not load plugin package. No device configuration available Or no plugin package URL specified.");
     }
 
     var deviceService = app.Services.GetRequiredService<IDeviceService>();
