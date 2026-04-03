@@ -52,7 +52,6 @@ builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundServic
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
 var pluginsLoaded = false;
-var deviceList = new List<IDevice>();
 
 _configurationService.InstallPluginPackage();
 loadPlugins();
@@ -66,8 +65,9 @@ if (pluginsLoaded)
     nodeLogger.LogInformation($"Plugins loaded successfully: {package?.InstalledPackageFilename}. Version: {package?.Version}");
 
     var deviceService = app.Services.GetRequiredService<IDeviceService>();
-    deviceService.Devices.AddRange(deviceList);
-    nodeLogger.LogInformation($"Found {deviceList.Count} devices from plugins.");
+    var devices = app.Services.GetServices<IDevice>();
+    deviceService.Devices.AddRange(devices);
+    nodeLogger.LogInformation($"Found {devices.Count()} devices from plugins.");
 }
 else
 {
@@ -135,8 +135,7 @@ void loadPlugins()
                         //load plugin itself
                         var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
                         var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
-                        initMethod.Invoke(obj, new object[] { builder.Services });
-                        deviceList.AddRange(obj.Devices);
+                        initMethod.Invoke(obj, [builder.Services]);
                         pluginsLoaded = true;
                     }
                     catch (Exception x)
