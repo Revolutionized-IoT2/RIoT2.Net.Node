@@ -45,12 +45,13 @@ namespace RIoT2.Net.Node.Services
             try
             {
                 var localConfigFile = loadConfigurationFile("Data/local.configuration.json");
-                byte[] result;
-                using (FileStream SourceStream = System.IO.File.Open(localConfigFile.FullName, FileMode.Open))
+                if (localConfigFile == null)
                 {
-                    result = new byte[SourceStream.Length];
-                    await SourceStream.ReadAsync(result, 0, (int)SourceStream.Length);
+                    _logger.LogWarning("Local (debug) configuration file not found. Skipping load.");
+                    return;
                 }
+
+                var result = await System.IO.File.ReadAllBytesAsync(localConfigFile.FullName);
 
                 SetDeviceConfiguration(Json.DeserializeAutoTypeNameHandling<NodeDeviceConfiguration>(System.Text.Encoding.UTF8.GetString(result)));
             }

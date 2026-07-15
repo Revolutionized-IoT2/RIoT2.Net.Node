@@ -24,11 +24,7 @@ namespace RIoT2.Net.Node.Services
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            await Task.Factory.StartNew(() =>
-            {
-                _deviceService.StopAllDevices();
-            });
-
+            _deviceService.StopAllDevices();
             await _mqttService.Stop();
         }
 
