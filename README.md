@@ -1,6 +1,6 @@
 # RIoT2.Net.Node
 
-`RIoT2.Net.Node` is a .NET 8 ASP.NET Core application that acts as an IoT **node** in the RIoT2 system. A node hosts and manages IoT devices, communicates with an orchestrator over MQTT, and dynamically loads device functionality from plugins.
+`RIoT2.Net.Node` is a .NET 9 ASP.NET Core application that acts as an IoT **node** in the RIoT2 system. A node hosts and manages IoT devices, communicates with an orchestrator over MQTT, and dynamically loads device functionality from plugins.
 
 ## Features
 
@@ -11,7 +11,7 @@
 
 ## Tech Stack
 
-- **Framework:** .NET 8 (`net8.0`)
+- **Framework:** .NET 9 (`net9.0`)
 - **App type:** ASP.NET Core Minimal API
 - **Logging:** Serilog (console + rolling file sink at `Logs/RIoT2.log`)
 - **JSON:** `System.Text.Json` (camelCase, case-insensitive, indented)
@@ -37,7 +37,7 @@ dotnet build
 dotnet run --project src/RIoT2.Net.Node/RIoT2.Net.Node.csproj
 ```
 
-Ensure you have the .NET 8 SDK installed. Optionally, install an IDE such as Visual Studio 2022 (Windows) or Visual Studio Code (cross-platform).
+Ensure you have the .NET 9 SDK installed. Optionally, install an IDE such as Visual Studio 2022 (Windows) or Visual Studio Code (cross-platform).
 
 ### Setup for deployment
 To deploy the application, configure the environment and logging as needed, then publish the application:
@@ -47,7 +47,7 @@ To deploy the application, configure the environment and logging as needed, then
 dotnet publish --configuration Release
 
 # navigate to the publish output directory
-cd ./src/RIoT2.Net.Node/bin/Release/net8.0/publish
+cd ./src/RIoT2.Net.Node/bin/Release/net9.0/publish
 
 # run the application
 dotnet RIoT2.Net.Node.dll

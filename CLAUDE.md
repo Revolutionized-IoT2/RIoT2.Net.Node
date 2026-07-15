@@ -4,7 +4,7 @@ This file provides guidance to AI coding assistants when working with code in th
 
 ## Project Overview
 
-`RIoT2.Net.Node` is a .NET 8 ASP.NET Core web application that acts as an IoT **node** in the RIoT2 system. A node hosts and manages IoT devices, communicates with an orchestrator over MQTT, and dynamically loads device functionality from plugins.
+`RIoT2.Net.Node` is a .NET 9 ASP.NET Core web application that acts as an IoT **node** in the RIoT2 system. A node hosts and manages IoT devices, communicates with an orchestrator over MQTT, and dynamically loads device functionality from plugins.
 
 Key responsibilities:
 - Load device plugins at runtime from the `Plugins/` directory.
@@ -14,7 +14,7 @@ Key responsibilities:
 
 ## Tech Stack
 
-- **Framework:** .NET 8 (`net8.0`)
+- **Framework:** .NET 9 (`net9.0`)
 - **App type:** ASP.NET Core Minimal API (`WebApplication`)
 - **Logging:** Serilog (console + rolling file sink at `Logs/RIoT2.log`)
 - **JSON:** `System.Text.Json` with camelCase naming, case-insensitive, indented output
