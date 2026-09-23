@@ -1,11 +1,18 @@
 ﻿using System.Reflection;
 using System.Runtime.Loader;
+using RIoT2.Core.Interfaces;
 
 namespace RIoT2.Net.Node
 {
     class PluginLoadContext : AssemblyLoadContext
     {
         private AssemblyDependencyResolver _resolver;
+        private static readonly Assembly[] SharedContracts =
+        [
+            typeof(IDevice).Assembly,
+            typeof(IServiceCollection).Assembly,
+            typeof(ILogger).Assembly
+        ];
 
         public PluginLoadContext(string pluginPath)
         {
@@ -14,6 +21,9 @@ namespace RIoT2.Net.Node
 
         protected override Assembly Load(AssemblyName assemblyName)
         {
+            var shared = SharedContracts.FirstOrDefault(assembly => assembly.GetName().Name == assemblyName.Name);
+            if (shared != null)
+                return shared;
             string assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
             if (assemblyPath != null)
             {

@@ -18,7 +18,7 @@ Key responsibilities:
 - **App type:** ASP.NET Core Minimal API (`WebApplication`)
 - **Logging:** Serilog (console + rolling file sink at `Logs/RIoT2.log`)
 - **JSON:** `System.Text.Json` with camelCase naming, case-insensitive, indented output
-- **Core library:** `RIoT2.Core` (NuGet package) — provides interfaces, models, and services
+- **Core library:** `RIoT2.Core` (NuGet package) ï¿½ provides interfaces, models, and services
 - **Containerization:** Docker (Linux target)
 
 ## Build, Run & Debug
@@ -35,7 +35,7 @@ Container folders:
 
 ## Architecture
 
-Startup and orchestration live in `Program.cs`. Services are registered via dependency injection as singletons and background/hosted services.
+Startup and orchestration live in `Program.cs`. Services are registered via dependency injection as singletons and background/hosted services. Core 0.1.42 supplies additive async lifecycle contracts and per-device operation ownership.
 
 ### Dependency Injection Registrations
 
@@ -46,8 +46,9 @@ Startup and orchestration live in `Program.cs`. Services are registered via depe
 | `ReportService` | `IReportService` | Singleton |
 | `NodeMqttService` | `INodeMqttService` | Singleton |
 | `DeviceService` | `IDeviceService` | Singleton |
-| `MqttBackgroundService` | — | Singleton + HostedService |
-| `DeviceSchedulerService` | — | HostedService |
+| `MqttBackgroundService` | ï¿½ | Singleton + HostedService |
+| `DeviceSchedulerService` | ï¿½ | HostedService |
+| `DeviceConfigurationCoordinator` | `IHostedService` | Singleton + HostedService, started last and stopped first |
 
 ### Plugin System
 
@@ -61,15 +62,18 @@ Startup and orchestration live in `Program.cs`. Services are registered via depe
 
 1. On startup, `ConfigurationService.InstallPluginPackage()` runs and plugins are loaded.
 2. Devices from plugins are collected via `IDevice` and added to `IDeviceService`.
-3. On `ApplicationStarted`, the node either sends a `NodeOnlineMessage` (via `MqttBackgroundService`) or, in `DEBUG`, loads a local device configuration file.
-4. `DeviceConfigurationUpdated` re-checks the plugin package, then stops, reconfigures, and restarts all devices.
+3. MQTT connection callbacks announce presence. In `DEBUG`, MQTT startup awaits local configuration loading.
+4. The coordinator subscribes before hosted services start, then applies the latest buffered configuration after MQTT and the scheduler start.
+5. Later updates cancel and await the previous application before replacing configuration. The coordinator owns shutdown; lifecycle changes, commands, and refreshes share per-device gates.
+
+Use `AsyncDeviceBase`/the opt-in async interfaces for new I/O-heavy plugins. Legacy synchronous methods remain supported but cannot be forcibly cancelled; never use `async void` for new device operations.
 
 ### HTTP Endpoints
 
-- `GET /api/node/manifest` — returns the node manifest.
-- `GET /api/node/plugin/manifest` — returns the plugin manifest.
-- `GET /api/device/status` — returns `DeviceStatus` for each device with a known state.
-- `GET /api/device/configuration/templates` — returns configuration templates (custom via `IDeviceWithConfiguration`, otherwise a default template).
+- `GET /api/node/manifest` ï¿½ returns the node manifest.
+- `GET /api/node/plugin/manifest` ï¿½ returns the plugin manifest.
+- `GET /api/device/status` ï¿½ returns `DeviceStatus` for each device with a known state.
+- `GET /api/device/configuration/templates` ï¿½ returns configuration templates (custom via `IDeviceWithConfiguration`, otherwise a default template).
 
 ### Environment Parameters
 
@@ -91,14 +95,13 @@ Notes:
 
 The node communicates with the orchestrator over MQTT via `INodeMqttService` (implemented by `NodeMqttService`) and coordinated by `MqttBackgroundService`. The concrete topic strings and message contracts are defined in the external `RIoT2.Core` package; the node participates in the following message flows:
 
-- **Node online** — On `ApplicationStarted`, if no device configuration has been received yet, the node publishes a `NodeOnlineMessage` (via `MqttBackgroundService.SendNodeOnlineMessage`) announcing its base URL, node type (`NodeType.Device`), manifest, and plugin manifest.
-- **Orchestrator online / configuration** — The node listens for orchestrator messages that push device configuration. Receiving configuration before startup suppresses the initial online message; updates raise `DeviceConfigurationUpdated`, which reloads plugins if needed and restarts devices.
-- **Commands (inbound)** — Command messages targeting devices are handled through `ICommandService`, dispatching to devices implementing `ICommandDevice`.
-- **Reports (outbound)** — Device state/telemetry is published through `IReportService`; refreshable devices (`IRefreshableReportDevice`) are polled on schedule by `DeviceSchedulerService`.
+- **Node online** ï¿½ On `ApplicationStarted`, if no device configuration has been received yet, the node publishes a `NodeOnlineMessage` (via `MqttBackgroundService.SendNodeOnlineMessage`) announcing its base URL, node type (`NodeType.Device`), manifest, and plugin manifest.
+- **Orchestrator online / configuration** ï¿½ The node listens for orchestrator messages that push device configuration. Receiving configuration before startup suppresses the initial online message; updates raise `DeviceConfigurationUpdated`, which reloads plugins if needed and restarts devices.
+- **Commands (inbound)** ï¿½ Command messages targeting devices are handled through `ICommandService`, dispatching to devices implementing `ICommandDevice`.
+- **Reports (outbound)** ï¿½ Device state/telemetry is published through `IReportService`; refreshable devices (`IRefreshableReportDevice`) are polled on schedule by `DeviceSchedulerService`.
 
 Lifecycle:
 - `MqttBackgroundService.StartAsync` calls `_mqttService.Start()` to establish the connection and subscriptions.
-- `MqttBackgroundService.StopAsync` stops all devices and then calls `_mqttService.Stop()`.
+- `DeviceConfigurationCoordinator.StopAsync` cancels/awaits application work and device operations before the scheduler and MQTT stop. `MqttBackgroundService.StopAsync` also awaits device shutdown and always stops MQTT in `finally`.
 
 > When adding or modifying MQTT topics or message types, update the shared contracts in `RIoT2.Core` rather than hard-coding topic strings in this project.
-

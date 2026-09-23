@@ -13,8 +13,21 @@
 
 The node subscribes to device configuration updates before hosted services start.
 Updates received while MQTT and the scheduler are starting are buffered; the latest
-configuration is applied once `ApplicationStarted` fires. Later updates are applied
-serially, and shutdown unsubscribes the handler.
+configuration is applied by a hosted coordinator after MQTT and the scheduler have started.
+Updates are coalesced to the latest desired configuration. A newer update cancels the previous
+application, but waits for its owned work before applying the replacement. Shutdown stops the
+coordinator/devices before the scheduler and MQTT; no async application-lifetime callbacks are used.
+
+Commands and scheduled refreshes share a per-device operation gate with lifecycle changes. Shutdown
+cancels native async I/O and waits for completion; failed device shutdown blocks configuration
+replacement. Removed devices are not restarted using old configuration. Legacy synchronous plugins
+remain supported, but blocking calls and `async void` plugin internals cannot be forcibly cancelled.
+The legacy plugin package downloader is still synchronous and is awaited by the coordinator.
+Cancellation never skips device cleanup or abandons a legacy call; consequently a non-cooperative
+legacy driver can delay shutdown beyond the host deadline, which is logged.
+
+Plugin load contexts share the host's Core, logging, and DI contract assemblies so plugin-local DLLs
+cannot create incompatible copies of `IDevice` or the opt-in async interfaces.
 
 Run the hardware-free startup/reconfiguration regression tests with:
 
@@ -34,7 +47,7 @@ dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj
 
 ### Shared package release prerequisite
 
-This node requires `RIoT2.Core` **0.1.41**. Publish that package to the configured
+This node requires `RIoT2.Core` **0.1.42**. Publish that package to the configured
 trusted feed before releasing the node. Local validation can use the final package
 in `C:\Src\RIoT2\.localfeed` with cached dependencies; a local pack is not a published release.
 

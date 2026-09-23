@@ -20,12 +20,21 @@ namespace RIoT2.Net.Node.Services
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             await initialize();
+#if DEBUG
+            await _configuration.LoadDeviceConfiguration("", "");
+#endif
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _deviceService.StopAllDevices();
-            await _mqttService.Stop();
+            try
+            {
+                if (_deviceService is IAsyncDeviceService asynchronous)
+                    await asynchronous.StopAllDevicesAsync(CancellationToken.None);
+                else
+                    _deviceService.StopAllDevices();
+            }
+            finally { await _mqttService.Stop(); }
         }
 
         public async Task SendNodeOnlineMessage() 

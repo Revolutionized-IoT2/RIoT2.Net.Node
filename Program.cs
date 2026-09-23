@@ -52,6 +52,13 @@ builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundServic
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
 var pluginsLoaded = false;
+builder.Services.AddSingleton<DeviceConfigurationCoordinator>(services => new DeviceConfigurationCoordinator(
+    _configurationService,
+    (configuration, token) => ApplyDeviceConfigurationAsync(services, configuration, token),
+    token => ((IAsyncDeviceService)services.GetRequiredService<IDeviceService>()).StopAllDevicesAsync(token),
+    nodeLogger));
+builder.Services.AddHostedService(services => services.GetRequiredService<DeviceConfigurationCoordinator>());
+builder.Services.AddHttpClient("plugin-metadata", client => client.Timeout = TimeSpan.FromSeconds(30));
 
 _configurationService.InstallPluginPackage();
 loadPlugins();
@@ -73,30 +80,6 @@ else
 {
     nodeLogger.LogCritical("NO PLUGINS LOADED. Starting without plugins...");
 }
-
-IHostApplicationLifetime lifetime = app.Lifetime;
-var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
-using var configurationCoordinator = new DeviceConfigurationCoordinator(
-    _configurationService, _configuration_DeviceConfigurationUpdated);
-lifetime.ApplicationStopping.Register(configurationCoordinator.Dispose);
-
-//Call nodeonline message once application has fully started
-lifetime.ApplicationStarted.Register(async () => {
-
-    var configuration = app.Services.GetRequiredService<INodeConfigurationService>();
-    configurationCoordinator.Activate();
-
-    //send node online message, unless we have already received orchestator online command to configure the node
-    if (!configuration.DeviceConfigurationLoaded)
-    {
-        await mqttService.SendNodeOnlineMessage();
-    }
-
-    //TODO create example file for local configuration
-#if DEBUG   //if debug -> load local configuration file, instead waiting command from orchestrator
-    app.Services.GetService<INodeConfigurationService>().LoadDeviceConfiguration("", "").Wait();
-#endif
-});
 
 var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
 app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnlineMessage()
@@ -157,16 +140,20 @@ void loadPlugins()
 }
 
 //this is called when node receives a new configuration for devices
-void _configuration_DeviceConfigurationUpdated()
+async Task ApplyDeviceConfigurationAsync(IServiceProvider services, NodeDeviceConfiguration desired, CancellationToken cancellationToken)
 {
     nodeLogger.LogInformation("Device configuration updated.");
-    var configurationService = app.Services.GetRequiredService<INodeConfigurationService>();
+    var configurationService = services.GetRequiredService<INodeConfigurationService>();
 
-    if (!String.IsNullOrEmpty(configurationService?.DeviceConfiguration?.PluginPackageUrl))
+    if (!String.IsNullOrEmpty(desired?.PluginPackageUrl))
     {
         try
         {
-            var pluginPackageMetadata = RIoT2.Core.Utils.Web.GetUrlMetadata(configurationService.DeviceConfiguration.PluginPackageUrl).Result;
+            using var client = services.GetRequiredService<IHttpClientFactory>().CreateClient("plugin-metadata");
+            using var request = new HttpRequestMessage(HttpMethod.Head, desired.PluginPackageUrl);
+            using var response = await client.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            var pluginPackageMetadata = response.Content.Headers;
             if (!String.IsNullOrEmpty(pluginPackageMetadata?.ContentDisposition?.FileName))
             {
                 if (!String.IsNullOrEmpty(configurationService.Configuration?.PluginManifest?.InstalledPackageFilename) || !pluginsLoaded)
@@ -174,17 +161,20 @@ void _configuration_DeviceConfigurationUpdated()
                     if (pluginPackageMetadata.ContentDisposition.FileName != configurationService.Configuration?.PluginManifest?.InstalledPackageFilename)
                     {
                         nodeLogger.LogInformation($"New plugin package available: {pluginPackageMetadata.ContentDisposition.FileName}. Downloading and saving.");
-                        configurationService.DownloadPluginPackage(configurationService.DeviceConfiguration.PluginPackageUrl);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        configurationService.DownloadPluginPackage(desired.PluginPackageUrl);
                         nodeLogger.LogWarning($"Exiting to restart node and load new plugin package...");
-                        app.Lifetime.StopApplication();  //restart node to load new plugin package
+                        services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
+                        return;
                     }
                 }
             }
             else
             {
-                nodeLogger.LogWarning($"Could not fetch plugin package data from Url: {configurationService.DeviceConfiguration.PluginPackageUrl}");
+                nodeLogger.LogWarning($"Could not fetch plugin package data from Url: {desired.PluginPackageUrl}");
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception x)
         {
             nodeLogger.LogError(x, $"Error while getting plugin package metadata: {x.Message}");
@@ -195,12 +185,10 @@ void _configuration_DeviceConfigurationUpdated()
         nodeLogger.LogWarning("Could not load plugin package. No device configuration available Or no plugin package URL specified.");
     }
 
-    var deviceService = app.Services.GetRequiredService<IDeviceService>();
+    var deviceService = (IAsyncDeviceService)services.GetRequiredService<IDeviceService>();
     nodeLogger.LogInformation("Re-starting all devices...");
-    deviceService.StopAllDevices();
-    deviceService.ConfigureDevices();
-    deviceService.StartAllDevices(true);
-    nodeLogger.LogInformation("Running");
+    await deviceService.ReconfigureDevicesAsync(desired?.DeviceConfigurations, cancellationToken);
+    nodeLogger.LogInformation("Device configuration applied; inspect device status for individual startup failures.");
 }
 
 app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>
