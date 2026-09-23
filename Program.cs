@@ -76,12 +76,15 @@ else
 
 IHostApplicationLifetime lifetime = app.Lifetime;
 var mqttService = app.Services.GetRequiredService<MqttBackgroundService>();
+using var configurationCoordinator = new DeviceConfigurationCoordinator(
+    _configurationService, _configuration_DeviceConfigurationUpdated);
+lifetime.ApplicationStopping.Register(configurationCoordinator.Dispose);
 
 //Call nodeonline message once application has fully started
 lifetime.ApplicationStarted.Register(async () => {
 
     var configuration = app.Services.GetRequiredService<INodeConfigurationService>();
-    configuration.DeviceConfigurationUpdated += _configuration_DeviceConfigurationUpdated;
+    configurationCoordinator.Activate();
 
     //send node online message, unless we have already received orchestator online command to configure the node
     if (!configuration.DeviceConfigurationLoaded)

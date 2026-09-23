@@ -9,6 +9,19 @@
 - Configures, starts, stops, and schedules devices.
 - Exposes HTTP endpoints for node/plugin manifests and device status/configuration templates.
 
+## Configuration startup ordering
+
+The node subscribes to device configuration updates before hosted services start.
+Updates received while MQTT and the scheduler are starting are buffered; the latest
+configuration is applied once `ApplicationStarted` fires. Later updates are applied
+serially, and shutdown unsubscribes the handler.
+
+Run the hardware-free startup/reconfiguration regression tests with:
+
+```powershell
+dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj
+```
+
 ## Tech Stack
 
 - **Framework:** .NET 9 (`net9.0`)
