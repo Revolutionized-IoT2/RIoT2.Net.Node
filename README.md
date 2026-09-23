@@ -32,6 +32,12 @@ dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj
 
 ## Getting Started
 
+### Shared package release prerequisite
+
+This node requires `RIoT2.Core` **0.1.41**. Publish that package to the configured
+trusted feed before releasing the node. Local validation can use the final package
+in `C:\Src\RIoT2\.localfeed` with cached dependencies; a local pack is not a published release.
+
 ### Build & Run
 
 dotnet build dotnet run
