@@ -1,6 +1,7 @@
 ﻿using RIoT2.Core.Models;
 using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces.Services;
+using RIoT2.Core.Utils;
 
 namespace RIoT2.Net.Node.Services
 {

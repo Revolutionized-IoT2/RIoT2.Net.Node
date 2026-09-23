@@ -241,6 +241,12 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
             try
             {
                 var template = (d as IDeviceWithConfiguration).GetConfigurationTemplate();
+
+                //Devices that opt in to Matter declare their endpoints against this same template instance,
+                //so the report/command template ids they reference are the ones that get persisted.
+                if (d is IMatterDevice matterDevice)
+                    template.MatterEndpoints = matterDevice.GetMatterEndpoints(template)?.ToList();
+
                 templates.Add(template);
             }
             catch (Exception x)

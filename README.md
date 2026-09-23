@@ -98,11 +98,11 @@ Node identity and connectivity are configured through environment variables:
 | `GET` | `/api/node/manifest` | Returns the node manifest. |
 | `GET` | `/api/node/plugin/manifest` | Returns the plugin manifest. |
 | `GET` | `/api/device/status` | Returns status for each device with a known state. |
-| `GET` | `/api/device/configuration/templates` | Returns device configuration templates. |
+| `GET` | `/api/device/configuration/templates` | Returns device configuration templates, including the Matter endpoints declared by devices that implement `IMatterDevice`. |
 
 ## Plugins
 
-Device functionality is provided by plugins — `.dll` files placed in the `Plugins/` directory. Each plugin exposes a type implementing `IDevicePlugin`, which is discovered via reflection and initialized at startup. Plugin packages can also be downloaded from a URL supplied in the device configuration; a new package triggers a node restart to reload plugins.
+Device functionality is provided by plugins ï¿½ `.dll` files placed in the `Plugins/` directory. Each plugin exposes a type implementing `IDevicePlugin`, which is discovered via reflection and initialized at startup. Plugin packages can also be downloaded from a URL supplied in the device configuration; a new package triggers a node restart to reload plugins.
 
 ## Docker
 
