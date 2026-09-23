@@ -25,6 +25,13 @@ Key responsibilities:
 
 The project uses standard .NET tooling and defines three configurations: `Debug`, `Release`, and `Local`.
 
+### Resuming this work
+
+Read the [continuation plan](README.md#continuation-plan) before selecting the next task. It records
+the verified test baseline, Core package prerequisite, pending real-EasyPLC acceptance checklist,
+release order, and deferred decisions. The integration harness is implemented; do not treat its
+passing results as validation of physical hardware or the actual plugin installation/startup path.
+
 ### Docker
 docker build -t riot2-net-node . docker save riot2-net-node > riot2-net-node.tar
 
@@ -106,3 +113,10 @@ Lifecycle:
 - `DeviceConfigurationCoordinator.StopAsync` cancels/awaits application work and device operations before the scheduler and MQTT stop. `MqttBackgroundService.StopAsync` also awaits device shutdown and always stops MQTT in `finally`.
 
 > When adding or modifying MQTT topics or message types, update the shared contracts in `RIoT2.Core` rather than hard-coding topic strings in this project.
+
+## Learnings
+
+MQTT receive callbacks are serialized, so awaiting a device transaction there can prevent the next
+configuration message from arriving to cancel it. Start generation-bound command dispatch at admission,
+track it within the bounded owner, and await that owner's work at shutdown instead of awaiting device
+I/O in the receive callback; the integration suite covers this distinction.

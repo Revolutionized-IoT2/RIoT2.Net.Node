@@ -59,6 +59,90 @@ or the debug-only local configuration file. It does not execute `Program.cs`, in
 packages, exercise an external orchestrator, or contact real hardware. Physical EasyPLC validation
 is still required before rollout.
 
+## Continuation plan
+
+Handoff baseline: **2026-09-23**. The async lifecycle and hardware-free integration work is
+implemented; the next acceptance step is a controlled real-EasyPLC trial, not another lifecycle rewrite.
+
+### 1. Resume from the verified software baseline
+
+| Suite | Last verified result |
+| --- | --- |
+| Node, including 11 integration cases | 21 passed in both Release and Debug |
+| Shared platform | 194 passed |
+| Network devices | 23 passed |
+
+Core **0.1.43** was built and validated locally. The node requires that version; network plugins
+still target Core **0.1.42** and were exercised with the node's 0.1.43 host assembly. No publishing,
+deployment, or physical hardware trial was performed as part of this work. Check repository status
+and the trusted package feed when resuming; do not assume that a local package has been released or
+overwrite an already published version.
+
+From the workspace root (`C:\Src\RIoT2`), restore the projects from the configured trusted feeds
+before running these commands. Include `C:\Src\RIoT2\.localfeed` as a restore source if 0.1.43 is
+still unpublished; that directory alone is sufficient only when the other dependencies are cached.
+
+```powershell
+dotnet test .\RIoT2.Net.Node\Tests\RIoT2.Net.Node.Tests.csproj --no-restore --configuration Release
+dotnet test .\RIoT2.Net.Node\Tests\RIoT2.Net.Node.Tests.csproj --no-restore --configuration Debug
+dotnet test .\RIoT2.Tests\RIoT2.Tests.csproj --no-restore
+dotnet test .\RIoT2.Net.Devices\Tests\RIoT2.Net.Devices.Tests.csproj --no-restore --configuration Release
+```
+
+The regression to preserve is in [NodeIntegrationTests.cs](Tests/NodeIntegrationTests.cs):
+a stalled command previously blocked MQTT configuration processing for about five seconds.
+Command execution must remain owned and bounded without holding up configuration receipt.
+Keep the 64-operation admission limit, cancellation of old-generation work, explicit failure/overflow
+logs, and awaited shutdown. Do not replace these guarantees with untracked background tasks.
+
+### 2. Run the controlled hardware acceptance trial
+
+Use an approved spare/lab PLC, a safe test program, and isolated outputs; do not exercise marker
+writes on equipment controlling machinery. Back up the node configuration and PLC program first.
+Use a **Release** node build so the debug-only local configuration path does not hide the real flow.
+
+- [ ] Record PLC model/firmware, node/plugin commit or artifact versions, Core version, configuration,
+  expected marker values, and a known-good rollback setup.
+- [ ] Start the actual node entry point with its plugin package and a test broker/orchestrator.
+  Confirm plugin loading, online presence, configuration retrieval, and device status endpoints.
+  These application-startup/package paths are outside the integration harness.
+- [ ] Verify handshake acceptance and marker reads against known PLC states. Check real response
+  lengths, status-byte layout, CRCs, and published report values.
+- [ ] Write only approved test markers on expansion zero, then verify PLC-side readback and reports.
+  Nonzero-expansion writes are currently unsupported and must remain explicitly rejected.
+- [ ] Interrupt the lab connection during I/O, reconnect, and verify visible failure plus recovery on
+  a subsequent operation using a fresh connection. Confirm the five-second transaction deadline;
+  do not expect automatic command replay.
+- [ ] Replace configuration during pending I/O and send rapid successive updates. Old commands and
+  reports must not cross into the replacement; only the latest desired configuration should remain active.
+- [ ] Shut down during a command and during a scheduled refresh, then restart. Verify awaited socket
+  cleanup, stopped device state, and no stale work or duplicate reports after restart.
+
+Save the results and sanitized logs with the tested versions. If hardware is unavailable, leave this
+gate pending: simulated wire tests do not establish compatibility with a physical PLC.
+
+### 3. Release only after acceptance
+
+- [ ] Resolve hardware discrepancies and add a simulated regression for each reproducible software bug.
+- [ ] Rerun the software suites against the final artifacts.
+- [ ] Publish the validated Core package to the trusted feed before releasing its dependent node.
+  If 0.1.43 is already published and needs changes, use a new version rather than replacing it.
+- [ ] Release the compatible node and network plugin artifacts/manifests together, smoke-test the actual
+  plugin-loading path, and deploy first to one controlled node with a rollback path.
+
+### 4. Subsequent coding priorities and deferred decisions
+
+After validating this path, inventory remaining network drivers for blocking I/O and `async void`
+lifecycle methods. Migrate one driver at a time to the existing async contracts, reusing this test
+pattern for cancellation, reconnect, reconfiguration, and shutdown. The synchronous plugin package
+downloader is a separate follow-up; its current calls must still be awaited rather than abandoned.
+
+Do not silently broaden the delivery guarantees: InfluxDB remains best-effort with no automatic
+retry/durable replay, and workflow delivery retains its bounded/no-retry policy. A durable outbox
+needs an explicit requirement that telemetry survive outages. Broader package/serializer and Matter
+redesigns remain lower priority. The previously deferred encrypted mobile BLE redesign still needs
+receiver/hardware requirements, and firmware changes still need board-level validation.
+
 ## Tech Stack
 
 - **Framework:** .NET 9 (`net9.0`)
