@@ -35,7 +35,7 @@ Container folders:
 
 ## Architecture
 
-Startup and orchestration live in `Program.cs`. Services are registered via dependency injection as singletons and background/hosted services. Core 0.1.42 supplies additive async lifecycle contracts and per-device operation ownership.
+Startup and orchestration live in `Program.cs`. Services are registered via dependency injection as singletons and background/hosted services. Core 0.1.43 includes the additive async lifecycle contracts and bounded, owned MQTT command dispatch.
 
 ### Dependency Injection Registrations
 
@@ -65,6 +65,7 @@ Startup and orchestration live in `Program.cs`. Services are registered via depe
 3. MQTT connection callbacks announce presence. In `DEBUG`, MQTT startup awaits local configuration loading.
 4. The coordinator subscribes before hosted services start, then applies the latest buffered configuration after MQTT and the scheduler start.
 5. Later updates cancel and await the previous application before replacing configuration. The coordinator owns shutdown; lifecycle changes, commands, and refreshes share per-device gates.
+6. MQTT admits at most 64 outstanding commands without awaiting device I/O on the receive callback. This keeps configuration updates responsive. Work captures its device generation at admission, is cancelled/awaited at shutdown, and overflow is logged without retry.
 
 Use `AsyncDeviceBase`/the opt-in async interfaces for new I/O-heavy plugins. Legacy synchronous methods remain supported but cannot be forcibly cancelled; never use `async void` for new device operations.
 
@@ -95,8 +96,8 @@ Notes:
 
 The node communicates with the orchestrator over MQTT via `INodeMqttService` (implemented by `NodeMqttService`) and coordinated by `MqttBackgroundService`. The concrete topic strings and message contracts are defined in the external `RIoT2.Core` package; the node participates in the following message flows:
 
-- **Node online** � On `ApplicationStarted`, if no device configuration has been received yet, the node publishes a `NodeOnlineMessage` (via `MqttBackgroundService.SendNodeOnlineMessage`) announcing its base URL, node type (`NodeType.Device`), manifest, and plugin manifest.
-- **Orchestrator online / configuration** � The node listens for orchestrator messages that push device configuration. Receiving configuration before startup suppresses the initial online message; updates raise `DeviceConfigurationUpdated`, which reloads plugins if needed and restarts devices.
+- **Node online** - MQTT connection/reconnection callbacks publish a `NodeOnlineMessage` announcing the base URL, node type, and manifests.
+- **Orchestrator online / configuration** - Presence requests trigger another announcement. Configuration notifications supply an API base URL; fetched configurations raise `DeviceConfigurationUpdated` and are applied by the hosted coordinator.
 - **Commands (inbound)** � Command messages targeting devices are handled through `ICommandService`, dispatching to devices implementing `ICommandDevice`.
 - **Reports (outbound)** � Device state/telemetry is published through `IReportService`; refreshable devices (`IRefreshableReportDevice`) are polled on schedule by `DeviceSchedulerService`.
 

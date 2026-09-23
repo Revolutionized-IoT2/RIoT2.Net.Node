@@ -29,11 +29,35 @@ legacy driver can delay shutdown beyond the host deadline, which is logged.
 Plugin load contexts share the host's Core, logging, and DI contract assemblies so plugin-local DLLs
 cannot create incompatible copies of `IDevice` or the opt-in async interfaces.
 
-Run the hardware-free startup/reconfiguration regression tests with:
+MQTT command admission is bounded to 64 outstanding operations (including queued device work).
+Commands are owned and awaited at shutdown, but do not block receipt of configuration or presence
+messages while I/O is pending. Excess commands are rejected with a warning; there is no retry or
+durable queue. MQTT acknowledgement is not an application-level execution acknowledgement.
 
+## Hardware-free integration tests
+
+Keep a sibling checkout of `RIoT2.Net.Devices` beside this repository. Run the node tests with:
 ```powershell
-dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj
+dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj --configuration Release
 ```
+
+The integration harness starts a loopback MQTT broker, an HTTP configuration endpoint, and a TCP
+PLC simulator on ephemeral ports. It composes the real MQTT background service, command/report
+services, device service, scheduler, configuration coordinator, and EasyPLC driver. Configuration
+notifications use the normal HTTP-fetch contract, rather than injecting configuration directly.
+The simulator independently validates request CRCs and handshakes and sends fragmented responses.
+
+Coverage includes command/report round trips, disconnects, invalid headers/CRCs, the real five-second
+transaction deadline, replacement during pending I/O, exact command admission capacity, cancellation
+of queued old-generation commands, latest-update coalescing, and host shutdown during a command or
+scheduled refresh. Legacy command services remain serialized and their running calls are awaited
+during shutdown. Timing-sensitive scenarios run without test-method parallelism, and all fixture
+tasks, sockets, and hosts are awaited/disposed.
+
+The harness uses in-memory node settings and the configuration base class, not environment variables
+or the debug-only local configuration file. It does not execute `Program.cs`, install/download plugin
+packages, exercise an external orchestrator, or contact real hardware. Physical EasyPLC validation
+is still required before rollout.
 
 ## Tech Stack
 
@@ -47,7 +71,7 @@ dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj
 
 ### Shared package release prerequisite
 
-This node requires `RIoT2.Core` **0.1.42**. Publish that package to the configured
+This node requires `RIoT2.Core` **0.1.43**. Publish that package to the configured
 trusted feed before releasing the node. Local validation can use the final package
 in `C:\Src\RIoT2\.localfeed` with cached dependencies; a local pack is not a published release.
 
