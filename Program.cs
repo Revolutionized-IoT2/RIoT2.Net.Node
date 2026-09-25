@@ -34,6 +34,7 @@ ILoggerFactory logger = LoggerFactory.Create(log =>
 });
 
 Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net.Node");
+NodeEnvironmentValidator.ValidateOrThrow(nodeLogger);
 
 //builder.Host.UseSerilog((ctx, lc) => lc
 //    .WriteTo.Console()
@@ -59,6 +60,7 @@ builder.Services.AddSingleton<DeviceConfigurationCoordinator>(services => new De
     nodeLogger));
 builder.Services.AddHostedService(services => services.GetRequiredService<DeviceConfigurationCoordinator>());
 builder.Services.AddHttpClient("plugin-metadata", client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHealthChecks();
 
 _configurationService.InstallPluginPackage();
 loadPlugins();
@@ -261,6 +263,8 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
     }
     return Results.Ok(templates);
 });
+
+app.MapHealthChecks("/health");
 
 if (builder.Environment.IsDevelopment())
 {

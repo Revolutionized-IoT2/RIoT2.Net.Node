@@ -72,8 +72,10 @@ implemented; the next acceptance step is a controlled real-EasyPLC trial, not an
 | Shared platform | 194 passed |
 | Network devices | 23 passed |
 
-Core **0.1.43** was built and validated locally. The node requires that version; network plugins
-still target Core **0.1.42** and were exercised with the node's 0.1.43 host assembly. No publishing,
+Core **0.1.43** was built and validated locally. The node and the in-scope network/Raspberry Pi
+plugins now target Core **0.1.43**. Older plugin packages that reference 0.1.41/0.1.42 still load
+through the node's shared `RIoT2.Core` assembly, so contract type identity is preserved, but release
+new node and plugin artifacts together to avoid missing-member/runtime behavior drift. No publishing,
 deployment, or physical hardware trial was performed as part of this work. Check repository status
 and the trusted package feed when resuming; do not assume that a local package has been released or
 overwrite an already published version.
@@ -197,15 +199,22 @@ Adjust the paths and settings based on your environment and requirements.
 ## Docker commands
 To build and run the application in a Docker container, use the following commands:
 
-```bash
-# build the Docker image
+```powershell
 docker build -t riot2-net-node .
 
-# run the Docker container
-docker run -d --name riot2-net-node -p 80:80 -v /path/to/data:/app/Data -v /path/to/logs:/app/Logs riot2-net-node
+docker run -d --name riot2-net-node -p 80:80 `
+  -e RIOT2_NODE_ID=<node-guid> `
+  -e RIOT2_NODE_URL=http://<node-host> `
+  -e RIOT2_MQTT_IP=<broker-host> `
+  -e RIOT2_MQTT_USERNAME=<mqtt-user> `
+  -e RIOT2_MQTT_PASSWORD=<mqtt-password> `
+  -v C:\path\to\data:/app/Data `
+  -v C:\path\to\logs:/app/Logs `
+  -v C:\path\to\plugins:/app/Plugins `
+  riot2-net-node
 ```
 
-Replace `/path/to/data` and `/path/to/logs` with the desired paths on the host machine for persistent data and logs storage.
+Replace the host paths with persistent locations for node manifests/configuration, logs, and plugin assemblies/packages. The Dockerfiles intentionally do not bake node IDs or MQTT credentials into the image; provide them at runtime.
 
 ## Container folders
 
@@ -231,6 +240,14 @@ Node identity and connectivity are configured through environment variables:
 | `RIOT2_MQTT_USERNAME` | Username for MQTT authentication. |
 | `RIOT2_MQTT_PASSWORD` | Password for MQTT authentication. |
 
+The image includes empty defaults for the node ID, node URL, MQTT username, and MQTT password. Treat all five variables as deployment-time settings; `RIOT2_MQTT_IP` must point at the broker.
+
+## Upgrading / breaking changes
+
+- Container images no longer include sample node IDs, node URLs, or MQTT credentials. Startup now fails fast with a critical log and a non-zero exit when `RIOT2_NODE_ID`, `RIOT2_NODE_URL`, or `RIOT2_MQTT_IP` is missing; `RIOT2_NODE_URL` must be an absolute `http://` or `https://` URL. `RIOT2_MQTT_USERNAME` and `RIOT2_MQTT_PASSWORD` remain optional.
+- Network/Raspberry Pi plugin projects now reference `RIoT2.Core` 0.1.43 to match the node host. `PluginLoadContext` still shares the host `RIoT2.Core` assembly so older 0.1.41/0.1.42 plugins do not get a separate `IDevice` type, but release node and plugin packages together to avoid runtime contract drift.
+- No public Core interface that third-party plugins implement was changed in this follow-up. Some built-in device classes now also implement optional async lifecycle/command interfaces so the node can await them; custom plugins may continue implementing the existing synchronous interfaces, though new I/O-heavy drivers should prefer the async contracts.
+
 ## HTTP Endpoints
 
 | Method | Route | Description |
@@ -239,10 +256,11 @@ Node identity and connectivity are configured through environment variables:
 | `GET` | `/api/node/plugin/manifest` | Returns the plugin manifest. |
 | `GET` | `/api/device/status` | Returns status for each device with a known state. |
 | `GET` | `/api/device/configuration/templates` | Returns device configuration templates, including the Matter endpoints declared by devices that implement `IMatterDevice`. |
+| `GET` | `/health` | Anonymous liveness endpoint backed by ASP.NET Core health checks. |
 
 ## Plugins
 
-Device functionality is provided by plugins � `.dll` files placed in the `Plugins/` directory. Each plugin exposes a type implementing `IDevicePlugin`, which is discovered via reflection and initialized at startup. Plugin packages can also be downloaded from a URL supplied in the device configuration; a new package triggers a node restart to reload plugins.
+Device functionality is provided by plugins — `.dll` files placed in the `Plugins/` directory. Each plugin exposes a type implementing `IDevicePlugin`, which is discovered via reflection and initialized at startup. Plugin packages can also be downloaded from a URL supplied in the device configuration; a new package triggers a node restart to reload plugins.
 
 ## Docker
 

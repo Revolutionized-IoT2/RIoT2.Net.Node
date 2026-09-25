@@ -1,5 +1,9 @@
 # .NET 9.0 Upgrade Plan
 
+Current status: the project targets `net9.0`, uses .NET 9 Docker base images, and references
+`RIoT2.Core` 0.1.43. The Dockerfiles no longer bake node IDs or MQTT credentials into the image;
+provide them through deployment environment variables.
+
 ## Execution Steps
 
 Execute steps below sequentially one by one in the order they are listed.

@@ -18,7 +18,7 @@ Key responsibilities:
 - **App type:** ASP.NET Core Minimal API (`WebApplication`)
 - **Logging:** Serilog (console + rolling file sink at `Logs/RIoT2.log`)
 - **JSON:** `System.Text.Json` with camelCase naming, case-insensitive, indented output
-- **Core library:** `RIoT2.Core` (NuGet package) � provides interfaces, models, and services
+- **Core library:** `RIoT2.Core` (NuGet package) — provides interfaces, models, and services
 - **Containerization:** Docker (Linux target)
 
 ## Build, Run & Debug
@@ -33,12 +33,19 @@ release order, and deferred decisions. The integration harness is implemented; d
 passing results as validation of physical hardware or the actual plugin installation/startup path.
 
 ### Docker
-docker build -t riot2-net-node . docker save riot2-net-node > riot2-net-node.tar
+```powershell
+docker build -t riot2-net-node .
+docker save riot2-net-node > riot2-net-node.tar
+```
 
 Container folders:
 - `/app/Data`
 - `/app/Logs`
 - `/app/Plugins`
+
+The Dockerfiles intentionally leave node identity and MQTT credentials empty. Supply
+`RIOT2_NODE_ID`, `RIOT2_NODE_URL`, `RIOT2_MQTT_IP`, `RIOT2_MQTT_USERNAME`, and
+`RIOT2_MQTT_PASSWORD` from the deployment environment and mount persistent Data/Logs/Plugins volumes.
 
 ## Architecture
 
@@ -53,8 +60,8 @@ Startup and orchestration live in `Program.cs`. Services are registered via depe
 | `ReportService` | `IReportService` | Singleton |
 | `NodeMqttService` | `INodeMqttService` | Singleton |
 | `DeviceService` | `IDeviceService` | Singleton |
-| `MqttBackgroundService` | � | Singleton + HostedService |
-| `DeviceSchedulerService` | � | HostedService |
+| `MqttBackgroundService` | — | Singleton + HostedService |
+| `DeviceSchedulerService` | — | HostedService |
 | `DeviceConfigurationCoordinator` | `IHostedService` | Singleton + HostedService, started last and stopped first |
 
 ### Plugin System
@@ -64,6 +71,7 @@ Startup and orchestration live in `Program.cs`. Services are registered via depe
 - A plugin type implementing `IDevicePlugin` is discovered via reflection; its `Initialize(IServiceCollection)` method wires up services.
 - Plugin MVC controllers are registered as `AssemblyPart`s so `app.MapControllers()` maps them.
 - Plugin packages can be downloaded from a URL supplied in device configuration; a new package triggers a node restart to reload plugins.
+- `PluginLoadContext` shares the host `RIoT2.Core`, DI, and logging assemblies by simple name. The in-scope Node, network plugin, and Raspberry Pi plugin projects now target Core 0.1.43; older 0.1.41/0.1.42 plugins keep type identity but should be rebuilt/released with the node to avoid runtime contract drift.
 
 ### Configuration & Lifecycle Flow
 
@@ -78,10 +86,11 @@ Use `AsyncDeviceBase`/the opt-in async interfaces for new I/O-heavy plugins. Leg
 
 ### HTTP Endpoints
 
-- `GET /api/node/manifest` � returns the node manifest.
-- `GET /api/node/plugin/manifest` � returns the plugin manifest.
-- `GET /api/device/status` � returns `DeviceStatus` for each device with a known state.
-- `GET /api/device/configuration/templates` � returns configuration templates (custom via `IDeviceWithConfiguration`, otherwise a default template).
+- `GET /api/node/manifest` — returns the node manifest.
+- `GET /api/node/plugin/manifest` — returns the plugin manifest.
+- `GET /api/device/status` — returns `DeviceStatus` for each device with a known state.
+- `GET /api/device/configuration/templates` — returns configuration templates (custom via `IDeviceWithConfiguration`, otherwise a default template).
+- `GET /health` — anonymous liveness health-check endpoint.
 
 ### Environment Parameters
 
@@ -97,6 +106,7 @@ Node identity and connectivity are configured entirely through environment varia
 
 Notes:
 - The `NodeConfiguration` is lazily initialized on first access and cached.
+- Startup validates `RIOT2_NODE_ID`, `RIOT2_NODE_URL`, and `RIOT2_MQTT_IP` before constructing the node configuration. Missing values or a non-http(s) node URL are logged at critical level and abort startup.
 - In `DEBUG` builds, device configuration is loaded from the local file `Data/local.configuration.json` instead of waiting for an orchestrator command (see `LoadDeviceConfiguration`).
 
 ### MQTT Topic Structure
@@ -105,8 +115,8 @@ The node communicates with the orchestrator over MQTT via `INodeMqttService` (im
 
 - **Node online** - MQTT connection/reconnection callbacks publish a `NodeOnlineMessage` announcing the base URL, node type, and manifests.
 - **Orchestrator online / configuration** - Presence requests trigger another announcement. Configuration notifications supply an API base URL; fetched configurations raise `DeviceConfigurationUpdated` and are applied by the hosted coordinator.
-- **Commands (inbound)** � Command messages targeting devices are handled through `ICommandService`, dispatching to devices implementing `ICommandDevice`.
-- **Reports (outbound)** � Device state/telemetry is published through `IReportService`; refreshable devices (`IRefreshableReportDevice`) are polled on schedule by `DeviceSchedulerService`.
+- **Commands (inbound)** — Command messages targeting devices are handled through `ICommandService`, dispatching to devices implementing `ICommandDevice`.
+- **Reports (outbound)** — Device state/telemetry is published through `IReportService`; refreshable devices (`IRefreshableReportDevice`) are polled on schedule by `DeviceSchedulerService`.
 
 Lifecycle:
 - `MqttBackgroundService.StartAsync` calls `_mqttService.Start()` to establish the connection and subscriptions.
