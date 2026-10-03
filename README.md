@@ -1,13 +1,13 @@
 # RIoT2.Net.Node
 
-ASP.NET Core .NET 9 device host for the [RIoT2](https://github.com/Revolutionized-IoT2)
+ASP.NET Core .NET 10 device host for the [RIoT2](https://github.com/Revolutionized-IoT2)
 platform. It loads device plugin assemblies, connects to the MQTT broker through
 `RIoT2.Core`, applies orchestrator-supplied device configuration, and exposes the node HTTP
 endpoints consumed by the orchestrator.
 
 - Type: ASP.NET Core web application
-- Target framework: `net9.0`
-- Core package: `RIoT2.Core` 0.1.43
+- Target framework: `net10.0`
+- Core package: `RIoT2.Core` 0.1.45
 - Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
 How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
@@ -75,7 +75,7 @@ The tests use a loopback MQTT broker, an HTTP configuration endpoint and simulat
 transports. They do not execute the Docker image, install a real plugin package from a release URL,
 talk to an external orchestrator, or contact physical hardware.
 
-If `RIoT2.Core` 0.1.43 is not available from the trusted feed, use the local feed at
+If `RIoT2.Core` 0.1.45 is not available from the trusted feed, use the local feed at
 `C:\Src\RIoT2\.localfeed` while validating. A local package is not a published release.
 
 ## Run locally
@@ -101,6 +101,9 @@ Build from this repository root:
 ```powershell
 docker build -t riot2-net-node .
 ```
+
+The default Dockerfile uses `aspnet:10.0-alpine` and `sdk:10.0-alpine`. `Dockerfile_Arm64` uses
+`aspnet:10.0-noble-arm64v8` for runtime and builds on the amd64 `sdk:10.0` image.
 
 Run with mounted runtime folders:
 
@@ -141,6 +144,9 @@ Loaded plugin controllers can add their own routes, such as the default devices 
 
 - Release notes are in [CHANGELOG.md](CHANGELOG.md).
 - CI publishes images when a version tag is pushed.
+- Update the Node image before installing `net10.0` plugin zips. A `net10.0` plugin cannot load
+  into a `net9.0` node, while the compatibility tests prove a `net9.0` plugin can load into the
+  `net10.0` node.
 - Release the Node image and the plugin packages together. Plugins run with the Node host's
   `RIoT2.Core` assembly, so package drift can become runtime drift.
 

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Test fixture: a device plugin built against the node's previous target framework. The node
+       tests load it to prove that plugins released before the node moved to net10.0 keep loading
+       (plan M8, plugin release order). Keep this one TFM behind the node. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RIoT2.Core" />
+  </ItemGroup>
+</Project>

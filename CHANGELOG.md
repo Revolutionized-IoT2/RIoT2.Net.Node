@@ -5,6 +5,14 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+- Changed the node target framework and Docker images to .NET 10; arm64 runtime now uses
+  `aspnet:10.0-noble-arm64v8`.
+- Changed package pins to `RIoT2.Core` 0.1.45, `Serilog.AspNetCore` 10.0.0 and
+  `Serilog.Sinks.File` 7.0.0 through central package management.
+- Removed the explicit `Microsoft.Extensions.Logging` package reference because ASP.NET Core
+  `net10.0` provides it.
+- Added a legacy-plugin compatibility fixture that targets `net9.0` intentionally and verifies it
+  loads through `PluginLoadContext` in the `net10.0` node.
 - Documentation: `AGENTS.md` is the AI instruction file, `CLAUDE.md` imports it, and operational
   hand-off notes were removed from the README.
 

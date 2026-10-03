@@ -171,7 +171,7 @@ public class DeviceConfigurationCoordinatorTests
         await coordinator.DisposeAsync();
         configuration.SetDeviceConfiguration(new NodeDeviceConfiguration());
         Assert.AreEqual(0, applications);
-        await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => coordinator.StartAsync(default));
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => coordinator.StartAsync(default));
     }
 
     [TestMethod]

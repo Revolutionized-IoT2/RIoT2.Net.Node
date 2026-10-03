@@ -26,7 +26,7 @@ public class NodeEnvironmentValidatorTests
     {
         var logger = new RecordingLogger();
 
-        var error = Assert.ThrowsException<InvalidOperationException>(() =>
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() =>
             NodeEnvironmentValidator.ValidateOrThrow(logger, Name => Name == "RIOT2_NODE_URL" ? "ftp://node" : null));
 
         StringAssert.Contains(error.Message, "RIOT2_NODE_ID is required");

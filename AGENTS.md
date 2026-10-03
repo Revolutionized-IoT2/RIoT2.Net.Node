@@ -8,7 +8,7 @@ workspace map, platform-wide rules and the documentation rules. In the local wor
 
 ## What this is
 
-An ASP.NET Core .NET 9 device host for the RIoT2 platform. It loads device plugins from
+An ASP.NET Core .NET 10 device host for the RIoT2 platform. It loads device plugins from
 `Plugins/`, exposes node and device HTTP endpoints, connects to MQTT through `RIoT2.Core`, applies
 orchestrator configuration, and owns device lifecycle, refresh and command dispatch.
 
@@ -42,8 +42,10 @@ docker build -t riot2-net-node-arm64 -f .\Dockerfile_Arm64 .
 
 - The tag workflow in `.github/workflows/main.yml` builds and pushes `ghcr.io/revolutionized-iot2/riot2-node`
   for amd64 and arm64, and injects `Data/Manifest.json` into the image.
-- If `RIoT2.Core` 0.1.43 is not published to the configured feed, restore/build with
+- If `RIoT2.Core` 0.1.45 is not published to the configured feed, restore/build with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
+- The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
+  `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`.
 
 ## Layout
 
@@ -91,8 +93,11 @@ The code side of these hub contracts is in this repository:
   untracked background tasks, `async void` lifecycle methods or blocking waits in host code.
 - Commands must remain admitted without awaiting device I/O in the MQTT receive callback. Preserve
   generation-bound ownership, bounded admission and awaited shutdown.
-- Release the Node image and plugin packages together. Plugins run inside the Node's
-  `RIoT2.Core` version, currently 0.1.43 in `RIoT2.Net.Node.csproj`.
+- Release the Node image and plugin packages together, node first. Plugins run inside the Node's
+  `RIoT2.Core` version (0.1.45, set in `Directory.Packages.props`). A `net10.0` plugin cannot
+  load into a `net9.0` node, while the legacy-plugin compatibility test proves a `net9.0` plugin
+  loads into the `net10.0` node.
+- Keep `PackageReference` items versionless; package versions belong in `Directory.Packages.props`.
 - Do not commit or document real values from `Data/`, `Properties/launchSettings.json` or local
   MQTT/device configuration.
 
@@ -115,7 +120,7 @@ The code side of these hub contracts is in this repository:
   while `DeviceBase.GetConfiguration<T>(key)` is case-sensitive (divergence C1). `FTP.cs` has
   PascalCase `Storage*` keys in its storage-configuration path; report that as a bug instead of
   silently normalizing it in documentation.
-- `RIoT2.Core` 0.1.43 is available locally in `C:\Src\RIoT2\.localfeed` when it has not yet been
+- `RIoT2.Core` 0.1.45 is available locally in `C:\Src\RIoT2\.localfeed` when it has not yet been
   published. Do not assume the local feed is the trusted release feed.
 
 ## Related work

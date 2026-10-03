@@ -1,11 +1,30 @@
-<Project Sdk="MSTest.Sdk/3.6.1">
+<Project Sdk="MSTest.Sdk/4.4.1">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseVSTest>true</UseVSTest>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\RIoT2.Net.Node.csproj" />
     <ProjectReference Include="..\..\RIoT2.Net.Devices\RIoT2.Net.Devices.csproj" />
+    <!-- Built, not referenced: the tests load it from LegacyPlugin\ like a real plugin folder. -->
+    <ProjectReference Include="LegacyPlugin\RIoT2.Net.Node.LegacyPlugin.csproj" ReferenceOutputAssembly="false" Private="false" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="LegacyPlugin\**" />
+    <None Remove="LegacyPlugin\**" />
+  </ItemGroup>
+
+  <Target Name="CopyLegacyPlugin" AfterTargets="Build">
+    <MSBuild Projects="LegacyPlugin\RIoT2.Net.Node.LegacyPlugin.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="_LegacyPluginTarget" />
+    </MSBuild>
+    <PropertyGroup>
+      <_LegacyPluginDir>@(_LegacyPluginTarget->'%(RootDir)%(Directory)')</_LegacyPluginDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_LegacyPluginFiles Include="$(_LegacyPluginDir)*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_LegacyPluginFiles)" DestinationFolder="$(OutDir)LegacyPlugin" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

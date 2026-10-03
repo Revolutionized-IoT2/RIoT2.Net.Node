@@ -59,7 +59,7 @@ public class NodeIntegrationTests
         Assert.IsFalse(node.Log.Errors.TryRead(out _), "Replacement must cancel, not time out, old I/O.");
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("disconnect")]
     [DataRow("bad-header")]
     [DataRow("bad-crc")]
@@ -128,7 +128,7 @@ public class NodeIntegrationTests
         Assert.IsFalse(node.Log.Errors.TryRead(out _));
     }
 
-    [DataTestMethod]
+    [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public async Task HostShutdownCancelsPendingCommandOrScheduledRefresh(bool scheduled)
