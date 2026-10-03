@@ -7,7 +7,7 @@ endpoints consumed by the orchestrator.
 
 - Type: ASP.NET Core web application
 - Target framework: `net10.0`
-- Core package: `RIoT2.Core` 0.1.45
+- Core package: `RIoT2.Core` 1.0.1
 - Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
 How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
@@ -75,8 +75,8 @@ The tests use a loopback MQTT broker, an HTTP configuration endpoint and simulat
 transports. They do not execute the Docker image, install a real plugin package from a release URL,
 talk to an external orchestrator, or contact physical hardware.
 
-If `RIoT2.Core` 0.1.45 is not available from the trusted feed, use the local feed at
-`C:\Src\RIoT2\.localfeed` while validating. A local package is not a published release.
+To try an unreleased Core, pack it into `C:\Src\RIoT2\.localfeed` and restore with that folder as
+an extra source. A local package is not a published release.
 
 ## Run locally
 
