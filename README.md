@@ -1,207 +1,110 @@
 # RIoT2.Net.Node
 
-`RIoT2.Net.Node` is a .NET 9 ASP.NET Core application that acts as an IoT **node** in the RIoT2 system. A node hosts and manages IoT devices, communicates with an orchestrator over MQTT, and dynamically loads device functionality from plugins.
+ASP.NET Core .NET 9 device host for the [RIoT2](https://github.com/Revolutionized-IoT2)
+platform. It loads device plugin assemblies, connects to the MQTT broker through
+`RIoT2.Core`, applies orchestrator-supplied device configuration, and exposes the node HTTP
+endpoints consumed by the orchestrator.
 
-## Features
+- Type: ASP.NET Core web application
+- Target framework: `net9.0`
+- Core package: `RIoT2.Core` 0.1.43
+- Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
-- Dynamically loads device plugins at runtime from the `Plugins/` directory.
-- Communicates with the orchestrator over MQTT (online messages, commands, configuration updates).
-- Configures, starts, stops, and schedules devices.
-- Exposes HTTP endpoints for node/plugin manifests and device status/configuration templates.
+How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
 
-## Configuration startup ordering
+## Contents
 
-The node subscribes to device configuration updates before hosted services start.
-Updates received while MQTT and the scheduler are starting are buffered; the latest
-configuration is applied by a hosted coordinator after MQTT and the scheduler have started.
-Updates are coalesced to the latest desired configuration. A newer update cancels the previous
-application, but waits for its owned work before applying the replacement. Shutdown stops the
-coordinator/devices before the scheduler and MQTT; no async application-lifetime callbacks are used.
+| Path | Contents |
+|---|---|
+| `Program.cs` | Service registration, plugin loading, configuration application and HTTP endpoints |
+| `Services/` | Environment configuration, MQTT hosted service, environment validation and configuration coordination |
+| `PluginLoadContext.cs` | Runtime plugin loading with shared host contract assemblies |
+| `Plugins/` | Plugin assemblies copied beside the executable for local/dev runs |
+| `Data/` | Runtime manifests, downloaded plugin zips and development-only local configuration |
+| `Tests/` | Hardware-free MSTest integration and unit tests |
+| `Dockerfile`, `Dockerfile_Arm64` | amd64 and arm64 production images |
 
-Commands and scheduled refreshes share a per-device operation gate with lifecycle changes. Shutdown
-cancels native async I/O and waits for completion; failed device shutdown blocks configuration
-replacement. Removed devices are not restarted using old configuration. Legacy synchronous plugins
-remain supported, but blocking calls and `async void` plugin internals cannot be forcibly cancelled.
-The legacy plugin package downloader is still synchronous and is awaited by the coordinator.
-Cancellation never skips device cleanup or abandons a legacy call; consequently a non-cooperative
-legacy driver can delay shutdown beyond the host deadline, which is logged.
+## Runtime behaviour
 
-Plugin load contexts share the host's Core, logging, and DI contract assemblies so plugin-local DLLs
-cannot create incompatible copies of `IDevice` or the opt-in async interfaces.
+At startup the node:
 
-MQTT command admission is bounded to 64 outstanding operations (including queued device work).
-Commands are owned and awaited at shutdown, but do not block receipt of configuration or presence
-messages while I/O is pending. Excess commands are rejected with a warning; there is no retry or
-durable queue. MQTT acknowledgement is not an application-level execution acknowledgement.
+1. Validates `RIOT2_NODE_ID`, `RIOT2_NODE_URL` and `RIOT2_MQTT_IP`.
+2. Installs the first plugin zip found in `Data/`, replacing the contents of `Plugins/`.
+3. Loads plugin assemblies from `Plugins/`, discovers `IDevicePlugin`, and lets the plugin register
+   devices and controllers.
+4. Starts MQTT and the scheduler, announces itself online and applies device configuration from the
+   orchestrator.
 
-## Hardware-free integration tests
+If no plugin assembly loads, the node logs `NO PLUGINS LOADED` and continues to serve its node
+endpoints. Device functionality is unavailable until a plugin package is installed and the node
+restarts.
 
-Keep a sibling checkout of `RIoT2.Net.Devices` beside this repository. Run the node tests with:
-```powershell
-dotnet test .\Tests\RIoT2.Net.Node.Tests.csproj --configuration Release
-```
+The node participates in these platform contracts:
 
-The integration harness starts a loopback MQTT broker, an HTTP configuration endpoint, and a TCP
-PLC simulator on ephemeral ports. It composes the real MQTT background service, command/report
-services, device service, scheduler, configuration coordinator, and EasyPLC driver. Configuration
-notifications use the normal HTTP-fetch contract, rather than injecting configuration directly.
-The simulator independently validates request CRCs and handshakes and sends fragmented responses.
+- [Node configuration, templates and plugins](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/configuration.md)
+- [MQTT topics and payloads](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/mqtt-topics.md)
+- [HTTP and gRPC APIs](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/http-api.md)
+- [Environment variables, ports, volumes and images](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/env-vars.md)
 
-Coverage includes command/report round trips, disconnects, invalid headers/CRCs, the real five-second
-transaction deadline, replacement during pending I/O, exact command admission capacity, cancellation
-of queued old-generation commands, latest-update coalescing, and host shutdown during a command or
-scheduled refresh. Legacy command services remain serialized and their running calls are awaited
-during shutdown. Timing-sensitive scenarios run without test-method parallelism, and all fixture
-tasks, sockets, and hosts are awaited/disposed.
+## Configuration
 
-The harness uses in-memory node settings and the configuration base class, not environment variables
-or the debug-only local configuration file. It does not execute `Program.cs`, install/download plugin
-packages, exercise an external orchestrator, or contact real hardware. Physical EasyPLC validation
-is still required before rollout.
+The production node is configured with environment variables:
 
-## Continuation plan
+| Variable | Required | Purpose |
+|---|---|---|
+| `RIOT2_NODE_ID` | Yes | Node id and MQTT client id; must match the orchestrator node configuration |
+| `RIOT2_NODE_URL` | Yes | Absolute `http://` or `https://` base URL advertised to the orchestrator |
+| `RIOT2_MQTT_IP` | Yes | MQTT broker host name or IP; the Core MQTT client uses port 1883 |
+| `RIOT2_MQTT_USERNAME` | No | MQTT username |
+| `RIOT2_MQTT_PASSWORD` | No | MQTT password |
 
-Handoff baseline: **2026-09-23**. The async lifecycle and hardware-free integration work is
-implemented; the next acceptance step is a controlled real-EasyPLC trial, not another lifecycle rewrite.
+Debug builds are special: they load `Data/local.configuration.json` and ignore the normal MQTT
+configuration message path. That file can hold real credentials. Use Release for integration tests,
+screenshots and real-device runs.
 
-### 1. Resume from the verified software baseline
+## Build and test
 
-| Suite | Last verified result |
-| --- | --- |
-| Node, including 11 integration cases | 21 passed in both Release and Debug |
-| Shared platform | 194 passed |
-| Network devices | 23 passed |
-
-Core **0.1.43** was built and validated locally. The node and the in-scope network/Raspberry Pi
-plugins now target Core **0.1.43**. Older plugin packages that reference 0.1.41/0.1.42 still load
-through the node's shared `RIoT2.Core` assembly, so contract type identity is preserved, but release
-new node and plugin artifacts together to avoid missing-member/runtime behavior drift. No publishing,
-deployment, or physical hardware trial was performed as part of this work. Check repository status
-and the trusted package feed when resuming; do not assume that a local package has been released or
-overwrite an already published version.
-
-From the workspace root (`C:\Src\RIoT2`), restore the projects from the configured trusted feeds
-before running these commands. Include `C:\Src\RIoT2\.localfeed` as a restore source if 0.1.43 is
-still unpublished; that directory alone is sufficient only when the other dependencies are cached.
+From the workspace root (`C:\Src\RIoT2`):
 
 ```powershell
-dotnet test .\RIoT2.Net.Node\Tests\RIoT2.Net.Node.Tests.csproj --no-restore --configuration Release
-dotnet test .\RIoT2.Net.Node\Tests\RIoT2.Net.Node.Tests.csproj --no-restore --configuration Debug
-dotnet test .\RIoT2.Tests\RIoT2.Tests.csproj --no-restore
-dotnet test .\RIoT2.Net.Devices\Tests\RIoT2.Net.Devices.Tests.csproj --no-restore --configuration Release
+dotnet build .\RIoT2.Net.Node\RIoT2.Net.Node.csproj
+dotnet test .\RIoT2.Net.Node\Tests\RIoT2.Net.Node.Tests.csproj -c Release
 ```
 
-The regression to preserve is in [NodeIntegrationTests.cs](Tests/NodeIntegrationTests.cs):
-a stalled command previously blocked MQTT configuration processing for about five seconds.
-Command execution must remain owned and bounded without holding up configuration receipt.
-Keep the 64-operation admission limit, cancellation of old-generation work, explicit failure/overflow
-logs, and awaited shutdown. Do not replace these guarantees with untracked background tasks.
+The tests use a loopback MQTT broker, an HTTP configuration endpoint and simulated device
+transports. They do not execute the Docker image, install a real plugin package from a release URL,
+talk to an external orchestrator, or contact physical hardware.
 
-### 2. Run the controlled hardware acceptance trial
+If `RIoT2.Core` 0.1.43 is not available from the trusted feed, use the local feed at
+`C:\Src\RIoT2\.localfeed` while validating. A local package is not a published release.
 
-Use an approved spare/lab PLC, a safe test program, and isolated outputs; do not exercise marker
-writes on equipment controlling machinery. Back up the node configuration and PLC program first.
-Use a **Release** node build so the debug-only local configuration path does not hide the real flow.
+## Run locally
 
-- [ ] Record PLC model/firmware, node/plugin commit or artifact versions, Core version, configuration,
-  expected marker values, and a known-good rollback setup.
-- [ ] Start the actual node entry point with its plugin package and a test broker/orchestrator.
-  Confirm plugin loading, online presence, configuration retrieval, and device status endpoints.
-  These application-startup/package paths are outside the integration harness.
-- [ ] Verify handshake acceptance and marker reads against known PLC states. Check real response
-  lengths, status-byte layout, CRCs, and published report values.
-- [ ] Write only approved test markers on expansion zero, then verify PLC-side readback and reports.
-  Nonzero-expansion writes are currently unsupported and must remain explicitly rejected.
-- [ ] Interrupt the lab connection during I/O, reconnect, and verify visible failure plus recovery on
-  a subsequent operation using a fresh connection. Confirm the five-second transaction deadline;
-  do not expect automatic command replay.
-- [ ] Replace configuration during pending I/O and send rapid successive updates. Old commands and
-  reports must not cross into the replacement; only the latest desired configuration should remain active.
-- [ ] Shut down during a command and during a scheduled refresh, then restart. Verify awaited socket
-  cleanup, stopped device state, and no stale work or duplicate reports after restart.
+Use a Release build and a test broker/orchestrator:
 
-Save the results and sanitized logs with the tested versions. If hardware is unavailable, leave this
-gate pending: simulated wire tests do not establish compatibility with a physical PLC.
-
-### 3. Release only after acceptance
-
-- [ ] Resolve hardware discrepancies and add a simulated regression for each reproducible software bug.
-- [ ] Rerun the software suites against the final artifacts.
-- [ ] Publish the validated Core package to the trusted feed before releasing its dependent node.
-  If 0.1.43 is already published and needs changes, use a new version rather than replacing it.
-- [ ] Release the compatible node and network plugin artifacts/manifests together, smoke-test the actual
-  plugin-loading path, and deploy first to one controlled node with a rollback path.
-
-### 4. Subsequent coding priorities and deferred decisions
-
-After validating this path, inventory remaining network drivers for blocking I/O and `async void`
-lifecycle methods. Migrate one driver at a time to the existing async contracts, reusing this test
-pattern for cancellation, reconnect, reconfiguration, and shutdown. The synchronous plugin package
-downloader is a separate follow-up; its current calls must still be awaited rather than abandoned.
-
-Do not silently broaden the delivery guarantees: InfluxDB remains best-effort with no automatic
-retry/durable replay, and workflow delivery retains its bounded/no-retry policy. A durable outbox
-needs an explicit requirement that telemetry survive outages. Broader package/serializer and Matter
-redesigns remain lower priority. The previously deferred encrypted mobile BLE redesign still needs
-receiver/hardware requirements, and firmware changes still need board-level validation.
-
-## Tech Stack
-
-- **Framework:** .NET 9 (`net9.0`)
-- **App type:** ASP.NET Core Minimal API
-- **Logging:** Serilog (console + rolling file sink at `Logs/RIoT2.log`)
-- **JSON:** `System.Text.Json` (camelCase, case-insensitive, indented)
-- **Core library:** `RIoT2.Core`
-
-## Getting Started
-
-### Shared package release prerequisite
-
-This node requires `RIoT2.Core` **0.1.43**. Publish that package to the configured
-trusted feed before releasing the node. Local validation can use the final package
-in `C:\Src\RIoT2\.localfeed` with cached dependencies; a local pack is not a published release.
-
-### Build & Run
-
-dotnet build dotnet run
-
-### Optional: Setup for development
-If you want to work on the source code, clone the repository and run the following commands:
-
-```bash
-# restore dependencies
-dotnet restore
-
-# build the solution
-dotnet build
-
-# run the application
-dotnet run --project src/RIoT2.Net.Node/RIoT2.Net.Node.csproj
+```powershell
+$env:RIOT2_NODE_ID = "<node-guid>"
+$env:RIOT2_NODE_URL = "http://<node-host>"
+$env:RIOT2_MQTT_IP = "<broker-host>"
+$env:RIOT2_MQTT_USERNAME = "<mqtt-user>"
+$env:RIOT2_MQTT_PASSWORD = "<mqtt-password>"
+dotnet run --project .\RIoT2.Net.Node\RIoT2.Net.Node.csproj -c Release
 ```
 
-Ensure you have the .NET 9 SDK installed. Optionally, install an IDE such as Visual Studio 2022 (Windows) or Visual Studio Code (cross-platform).
+Put plugin assemblies in the publish/runtime `Plugins/` folder, or place a plugin zip in `Data/`
+and restart so Core installs it into `Plugins/`.
 
-### Setup for deployment
-To deploy the application, configure the environment and logging as needed, then publish the application:
+## Docker
 
-```bash
-# publish the application
-dotnet publish --configuration Release
-
-# navigate to the publish output directory
-cd ./src/RIoT2.Net.Node/bin/Release/net9.0/publish
-
-# run the application
-dotnet RIoT2.Net.Node.dll
-```
-Adjust the paths and settings based on your environment and requirements.
-
-## Docker commands
-To build and run the application in a Docker container, use the following commands:
+Build from this repository root:
 
 ```powershell
 docker build -t riot2-net-node .
+```
 
+Run with mounted runtime folders:
+
+```powershell
 docker run -d --name riot2-net-node -p 80:80 `
   -e RIOT2_NODE_ID=<node-guid> `
   -e RIOT2_NODE_URL=http://<node-host> `
@@ -214,54 +117,38 @@ docker run -d --name riot2-net-node -p 80:80 `
   riot2-net-node
 ```
 
-Replace the host paths with persistent locations for node manifests/configuration, logs, and plugin assemblies/packages. The Dockerfiles intentionally do not bake node IDs or MQTT credentials into the image; provide them at runtime.
+The image listens on container port 80 and has no `USER` directive, so it runs as root. The
+published image does not declare volumes; mount `/app/Data`, `/app/Logs` and `/app/Plugins`
+yourself.
 
-## Container folders
+## HTTP endpoints
 
-The application uses the following folders within the container:
+Node endpoints are documented in the hub [HTTP contract](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/http-api.md).
+This repository currently serves:
 
-/app/Data
-/app/Logs
-/app/Plugins
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/node/manifest` | Node manifest from `Data/Manifest.json` |
+| `GET` | `/api/node/plugin/manifest` | Loaded plugin package manifest |
+| `GET` | `/api/device/status` | States for devices whose state is known |
+| `GET` | `/api/device/configuration/templates` | Configuration templates and Matter endpoint declarations from loaded devices |
+| `GET` | `/health` | ASP.NET Core health check |
 
-The project defines three build configurations: `Debug`, `Release`, and `Local`.
+Loaded plugin controllers can add their own routes, such as the default devices plugin's
+`POST /api/webhook/{address}` and download endpoints.
 
-> In `Debug` builds, device configuration is loaded from `Data/local.configuration.json` instead of waiting for an orchestrator command.
+## Versions and releases
 
-## Configuration
+- Release notes are in [CHANGELOG.md](CHANGELOG.md).
+- CI publishes images when a version tag is pushed.
+- Release the Node image and the plugin packages together. Plugins run with the Node host's
+  `RIoT2.Core` assembly, so package drift can become runtime drift.
 
-Node identity and connectivity are configured through environment variables:
+## Contributing
 
-| Environment Variable | Description |
-| --- | --- |
-| `RIOT2_NODE_ID` | Unique identifier for this node; also used as the MQTT client id. |
-| `RIOT2_NODE_URL` | Base URL where the node's HTTP API is reachable. |
-| `RIOT2_MQTT_IP` | Address of the MQTT broker. |
-| `RIOT2_MQTT_USERNAME` | Username for MQTT authentication. |
-| `RIOT2_MQTT_PASSWORD` | Password for MQTT authentication. |
+- Instructions for AI coding agents: [AGENTS.md](AGENTS.md).
+- Platform documentation: [.github/docs](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/README.md).
 
-The image includes empty defaults for the node ID, node URL, MQTT username, and MQTT password. Treat all five variables as deployment-time settings; `RIOT2_MQTT_IP` must point at the broker.
+## License
 
-## Upgrading / breaking changes
-
-- Container images no longer include sample node IDs, node URLs, or MQTT credentials. Startup now fails fast with a critical log and a non-zero exit when `RIOT2_NODE_ID`, `RIOT2_NODE_URL`, or `RIOT2_MQTT_IP` is missing; `RIOT2_NODE_URL` must be an absolute `http://` or `https://` URL. `RIOT2_MQTT_USERNAME` and `RIOT2_MQTT_PASSWORD` remain optional.
-- Network/Raspberry Pi plugin projects now reference `RIoT2.Core` 0.1.43 to match the node host. `PluginLoadContext` still shares the host `RIoT2.Core` assembly so older 0.1.41/0.1.42 plugins do not get a separate `IDevice` type, but release node and plugin packages together to avoid runtime contract drift.
-- No public Core interface that third-party plugins implement was changed in this follow-up. Some built-in device classes now also implement optional async lifecycle/command interfaces so the node can await them; custom plugins may continue implementing the existing synchronous interfaces, though new I/O-heavy drivers should prefer the async contracts.
-
-## HTTP Endpoints
-
-| Method | Route | Description |
-| --- | --- | --- |
-| `GET` | `/api/node/manifest` | Returns the node manifest. |
-| `GET` | `/api/node/plugin/manifest` | Returns the plugin manifest. |
-| `GET` | `/api/device/status` | Returns status for each device with a known state. |
-| `GET` | `/api/device/configuration/templates` | Returns device configuration templates, including the Matter endpoints declared by devices that implement `IMatterDevice`. |
-| `GET` | `/health` | Anonymous liveness endpoint backed by ASP.NET Core health checks. |
-
-## Plugins
-
-Device functionality is provided by plugins — `.dll` files placed in the `Plugins/` directory. Each plugin exposes a type implementing `IDevicePlugin`, which is discovered via reflection and initialized at startup. Plugin packages can also be downloaded from a URL supplied in the device configuration; a new package triggers a node restart to reload plugins.
-
-## Docker
-
-### Docker commands
+See [LICENSE](LICENSE).
