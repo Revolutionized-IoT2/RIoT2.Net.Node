@@ -44,6 +44,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     public TestLog Log { get; } = new();
     public ChannelReader<Report> Reports => _reports.Reader;
     public ConcurrentQueue<string> Applied { get; } = new();
+    public ConcurrentQueue<DeviceReconfigurationResult> Reconfigurations { get; } = new();
     public const string NodeId = "integration-node";
 
     private NodeIntegrationHarness(Func<NodeDeviceConfiguration, CancellationToken, Task> beforeApply, ICommandService commandService)
@@ -90,7 +91,8 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
             {
                 if (beforeApply != null)
                     await beforeApply(desired, token);
-                await Devices.ReconfigureDevicesAsync(desired.DeviceConfigurations, token);
+                var result = await Devices.ReconfigureChangedDevicesAsync(desired.DeviceConfigurations, token);
+                Reconfigurations.Enqueue(result);
                 Applied.Enqueue(desired.Name);
                 _applied.Writer.TryWrite(desired.Name);
             }, token => Devices.StopAllDevicesAsync(token), Log));

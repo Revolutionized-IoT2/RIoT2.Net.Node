@@ -7,7 +7,7 @@ endpoints consumed by the orchestrator.
 
 - Type: ASP.NET Core web application
 - Target framework: `net10.0`
-- Core package: `RIoT2.Core` 1.0.1
+- Core package: `RIoT2.Core` 1.1.0
 - Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
 How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
@@ -34,6 +34,11 @@ At startup the node:
    devices and controllers.
 4. Starts MQTT and the scheduler, announces itself online and applies device configuration from the
    orchestrator.
+
+Every configuration message (on startup, on each MQTT reconnect, after an orchestrator restart and
+after a save in the UI) restarts only the devices whose configuration entry was added, changed or
+removed, plus configured devices that are not running. An unchanged configuration leaves every
+device and its in-flight commands alone, and the log says `Device configuration unchanged`.
 
 If no plugin assembly loads, the node logs `NO PLUGINS LOADED` and continues to serve its node
 endpoints. Device functionality is unavailable until a plugin package is installed and the node

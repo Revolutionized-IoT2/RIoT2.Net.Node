@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using RIoT2.Core;
+using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces;
 using RIoT2.Core.Interfaces.Services;
 using RIoT2.Core.Models;
@@ -187,10 +188,12 @@ async Task ApplyDeviceConfigurationAsync(IServiceProvider services, NodeDeviceCo
         nodeLogger.LogWarning("Could not load plugin package. No device configuration available Or no plugin package URL specified.");
     }
 
-    var deviceService = (IAsyncDeviceService)services.GetRequiredService<IDeviceService>();
-    nodeLogger.LogInformation("Re-starting all devices...");
-    await deviceService.ReconfigureDevicesAsync(desired?.DeviceConfigurations, cancellationToken);
-    nodeLogger.LogInformation("Device configuration applied; inspect device status for individual startup failures.");
+    var deviceService = (DeviceServiceBase)services.GetRequiredService<IDeviceService>();
+    var result = await deviceService.ReconfigureChangedDevicesAsync(desired?.DeviceConfigurations, cancellationToken);
+    if (result.NothingChanged)
+        nodeLogger.LogInformation("Device configuration unchanged; no device restarted.");
+    else
+        nodeLogger.LogInformation("Device configuration applied: {Result}. Inspect device status for individual startup failures.", result);
 }
 
 app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>

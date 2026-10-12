@@ -36,6 +36,40 @@ public class NodeIntegrationTests
     }
 
     [TestMethod]
+    public async Task IdenticalConfigurationKeepsTheDeviceAndItsPendingCommand()
+    {
+        await using var plc = new SimulatedEasyPlc();
+        await using var node = await NodeIntegrationHarness.StartAsync();
+        await node.ConfigureAsync(node.ConfigurationFor(plc));
+        await node.CommandAsync("refresh");
+        var pending = await ReadAsync(plc.Requests);
+
+        await node.ConfigureAsync(node.ConfigurationFor(plc));
+
+        Assert.IsTrue(node.Reconfigurations.Last().NothingChanged, node.Reconfigurations.Last().ToString());
+        pending.ReplyWithMarkers(true);
+        Assert.AreEqual("initial-marker", (await ReadAsync(node.Reports)).Id);
+        Assert.AreEqual(1, plc.ConnectionCount);
+        Assert.AreEqual(DeviceState.Running, node.Device.State);
+        Assert.IsFalse(node.Log.Errors.TryRead(out _));
+    }
+
+    [TestMethod]
+    public async Task ChangedConfigurationRestartsTheDevice()
+    {
+        await using var plc = new SimulatedEasyPlc();
+        await using var node = await NodeIntegrationHarness.StartAsync();
+        await node.ConfigureAsync(node.ConfigurationFor(plc));
+
+        await node.ConfigureAsync(node.ConfigurationFor(plc, "renamed"));
+
+        var result = node.Reconfigurations.Last();
+        Assert.AreEqual(1, result.Started, result.ToString());
+        Assert.AreEqual("renamed", node.Device.Name);
+        Assert.AreEqual(DeviceState.Running, node.Device.State);
+    }
+
+    [TestMethod]
     public async Task ConfigurationPreemptsPendingMqttCommandWithoutWaitingForItsDeadline()
     {
         await using var oldPlc = new SimulatedEasyPlc();

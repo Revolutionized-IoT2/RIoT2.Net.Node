@@ -5,6 +5,16 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+Restart only changed devices ([I04](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i04-restart-only-changed-devices-s)).
+No deployment change; the 1.0.1 plugins keep working.
+
+- Changed configuration application to `DeviceServiceBase.ReconfigureChangedDevicesAsync`. A
+  configuration message restarts only the devices whose entry was added, changed or removed, plus
+  configured devices that are not running. Reconnects, orchestrator restarts and saves of other
+  devices no longer restart every device or cancel their commands
+  ([backlog item 18](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/backlog/open-issues.md)).
+- Changed the Core pin to `RIoT2.Core` 1.1.0.
+
 ## [1.0.1] - 2026-10-12
 
 Includes the I01 publish fix (backlog item 20). No deployment change. Install the 1.0.1 plugin zips after this image.
