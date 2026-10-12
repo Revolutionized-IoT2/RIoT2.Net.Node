@@ -107,9 +107,11 @@ The code side of these hub contracts is in this repository:
   `Services/MqttBackgroundService.cs`, and Core's `NodeMqttService` ignores MQTT configuration
   messages under `#if DEBUG`. That file can contain real device credentials. Never run Debug
   builds against real devices; use Release for integration tests.
-- The Web SDK publishes local `Data/*.json` into publish output, and `.dockerignore` does not
-  exclude `Data/`. A developer checkout can accidentally bake `local.configuration.json` or
-  Firebase service-account JSON into output or a local image (backlog item 20).
+- `Data/`, `Logs/`, local `Plugins/` and `appsettings.Development.json` are excluded from publish
+  in the `.csproj`, and `Data`, `Logs` and `Plugins` from the Docker context (backlog item 20,
+  fixed 2026-10-12). Local `Plugins/*.dll` are still copied to the build output for debugging.
+  Don't remove these exclusions: `Data/` holds `local.configuration.json` and the Firebase
+  service-account JSON.
 - The Docker images listen on port 80 (`ASPNETCORE_HTTP_PORTS=80`) and run as root because no
   `USER` is set. That is intentional for Raspberry Pi GPIO/D-Bus-style host privileges.
 - Plugins load only once at startup from `Plugins/` next to the executable. The first `Data/*.zip`
@@ -129,7 +131,9 @@ The code side of these hub contracts is in this repository:
   plugin configuration discovery and no static device state.
 - [M11](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/plans/m11-async-cleanup.md):
   remaining blocking and `async void` cleanup.
+- [M12](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/plans/m12-device-plugin-sdk.md) ([ADR 0014](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/adr/0014-device-plugin-sdk.md)):
+  device plugin SDK (`PluginBase`, conformance test, packaging target, typed options).
 - [Design 7.2](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/desired-state-configuration.md):
   desired-state configuration and safer plugin updates.
-- Backlog items 4, 5, 16, 18 and 20 in
+- Backlog items 4, 5, 16, 18, 20 and 23 in
   [open-issues.md](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/backlog/open-issues.md).

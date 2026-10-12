@@ -13,6 +13,11 @@ publishes Docker images to GitHub Container Registry.
   `net10.0` provides it.
 - Added a legacy-plugin compatibility fixture that targets `net9.0` intentionally and verifies it
   loads through `PluginLoadContext` in the `net10.0` node.
+- Fixed (backlog item 20): `dotnet publish` and a local `docker build` no longer copy local runtime
+  data into the output. `Data/` (node configuration, Firebase service account, price cache),
+  `Logs/`, local `Plugins/` and `appsettings.Development.json` are excluded from publish, and
+  `.dockerignore` excludes `Data`, `Logs` and `Plugins`. Local plugin DLLs are still copied to the
+  build output for debugging; the hand-maintained list of 20 plugin DLLs became one wildcard.
 - Documentation: `AGENTS.md` is the AI instruction file, `CLAUDE.md` imports it, and operational
   hand-off notes were removed from the README.
 
