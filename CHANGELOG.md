@@ -5,6 +5,8 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-12
+
 Restart only changed devices ([I04](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i04-restart-only-changed-devices-s)).
 No deployment change; the 1.0.1 plugins keep working.
 
