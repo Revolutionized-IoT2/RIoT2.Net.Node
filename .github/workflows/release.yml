@@ -1,0 +1,40 @@
+name: Release
+
+# Push a x.y.z tag to release ghcr.io/revolutionized-iot2/riot2-node:<tag>, :latest,
+# :<tag>-arm64v8 and :latest-arm64v8. Release the plugin zips only after this image.
+
+on:
+  push:
+    tags: ["*.*.*"]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  validate:
+    uses: Revolutionized-IoT2/.github/.github/workflows/dotnet-validate.yml@main
+    with:
+      build: RIoT2.Net.Node.sln
+      test: Tests/RIoT2.Net.Node.Tests.csproj
+      siblings: RIoT2.Net.Devices
+    secrets: inherit
+
+  image-amd64:
+    needs: validate
+    uses: Revolutionized-IoT2/.github/.github/workflows/docker-publish.yml@main
+    with:
+      image: riot2-node
+      push: true
+    secrets: inherit
+
+  image-arm64:
+    needs: validate
+    uses: Revolutionized-IoT2/.github/.github/workflows/docker-publish.yml@main
+    with:
+      image: riot2-node
+      dockerfile: Dockerfile_Arm64
+      platform: linux/arm64
+      tag-suffix: -arm64v8
+      push: true
+    secrets: inherit

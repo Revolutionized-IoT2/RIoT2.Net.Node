@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dotnet:
+    uses: Revolutionized-IoT2/.github/.github/workflows/dotnet-validate.yml@main
+    with:
+      build: RIoT2.Net.Node.sln
+      test: Tests/RIoT2.Net.Node.Tests.csproj
+      # The tests load the Devices plugin catalog through ../../RIoT2.Net.Devices.
+      siblings: RIoT2.Net.Devices
+    secrets: inherit
+
+  image-amd64:
+    uses: Revolutionized-IoT2/.github/.github/workflows/docker-publish.yml@main
+    with:
+      image: riot2-node
+    secrets: inherit
+
+  image-arm64:
+    uses: Revolutionized-IoT2/.github/.github/workflows/docker-publish.yml@main
+    with:
+      image: riot2-node
+      dockerfile: Dockerfile_Arm64
+      platform: linux/arm64
+      tag-suffix: -arm64v8
+    secrets: inherit
+
+  secret-scan:
+    uses: Revolutionized-IoT2/.github/.github/workflows/secret-scan.yml@main
