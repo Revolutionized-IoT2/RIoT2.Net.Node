@@ -5,6 +5,10 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-12
+
+Includes the I01 publish fix (backlog item 20). No deployment change. Install the 1.0.1 plugin zips after this image.
+
 - Changed both Dockerfiles: the GitHub Packages token is the BuildKit secret `nuget_token` and is
   no longer stored in an image layer. The `NUGET_AUTH_TOKEN` build argument is gone.
   `Data/Manifest.json` is written in the image from the `VERSION` and `IMAGE_TAG` build arguments
