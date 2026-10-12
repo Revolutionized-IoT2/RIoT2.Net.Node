@@ -96,10 +96,12 @@ and restart so Core installs it into `Plugins/`.
 
 ## Docker
 
-Build from this repository root:
+Build from this repository root. The GitHub Packages token is passed as a BuildKit secret, so it
+never lands in an image layer:
 
 ```powershell
-docker build -t riot2-net-node .
+$env:NUGET_AUTH_TOKEN = '<github-packages-token>'
+docker build --secret id=nuget_token,env=NUGET_AUTH_TOKEN -t riot2-net-node .
 ```
 
 The default Dockerfile uses `aspnet:10.0-alpine` and `sdk:10.0-alpine`. `Dockerfile_Arm64` uses
@@ -143,7 +145,9 @@ Loaded plugin controllers can add their own routes, such as the default devices 
 ## Versions and releases
 
 - Release notes are in [CHANGELOG.md](CHANGELOG.md).
-- CI publishes images when a version tag is pushed.
+- Push a tag `x.y.z` to release. The release workflow runs the tests, then publishes the amd64
+  and arm64 images. Every push runs the same checks and both image builds in CI
+  ([CI guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/ci.md)).
 - Update the Node image before installing `net10.0` plugin zips. A `net10.0` plugin cannot load
   into a `net9.0` node, while the compatibility tests prove a `net9.0` plugin can load into the
   `net10.0` node.

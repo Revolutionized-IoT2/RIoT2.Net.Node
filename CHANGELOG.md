@@ -5,6 +5,12 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+- Changed both Dockerfiles: the GitHub Packages token is the BuildKit secret `nuget_token` and is
+  no longer stored in an image layer. The `NUGET_AUTH_TOKEN` build argument is gone.
+  `Data/Manifest.json` is written in the image from the `VERSION` and `IMAGE_TAG` build arguments
+  instead of being injected with `docker commit`.
+- CI: every push runs the tests (with RIoT2.Net.Devices cloned next to this repository), both
+  image builds and a secret scan; a tag validates before it pushes the images.
 - Fixed (backlog item 20): `dotnet publish` and a local `docker build` no longer copy local runtime
   data into the output. `Data/` (node configuration, Firebase service account, price cache),
   `Logs/`, local `Plugins/` and `appsettings.Development.json` are excluded from publish, and

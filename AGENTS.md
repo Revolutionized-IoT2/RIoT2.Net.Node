@@ -36,12 +36,16 @@ dotnet run --project .\RIoT2.Net.Node\RIoT2.Net.Node.csproj -c Release
 Docker commands run from this repository root (`C:\Src\RIoT2\RIoT2.Net.Node`):
 
 ```powershell
-docker build -t riot2-net-node .
-docker build -t riot2-net-node-arm64 -f .\Dockerfile_Arm64 .
+$env:NUGET_AUTH_TOKEN = '<github-packages-token>'   # a BuildKit secret, never a build argument
+docker build --secret id=nuget_token,env=NUGET_AUTH_TOKEN -t riot2-net-node .
+docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUTH_TOKEN -t riot2-net-node-arm64 -f .\Dockerfile_Arm64 .
 ```
 
-- The tag workflow in `.github/workflows/main.yml` builds and pushes `ghcr.io/revolutionized-iot2/riot2-node`
-  for amd64 and arm64, and injects `Data/Manifest.json` into the image.
+- Every push runs `.github/workflows/ci.yml`: build, the tests (with RIoT2.Net.Devices cloned
+  next to this repository), both image builds and a secret scan. A `x.y.z` tag runs
+  `release.yml`, which validates and then pushes `ghcr.io/revolutionized-iot2/riot2-node` for amd64
+  and arm64 ([CI guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/ci.md)). The Dockerfiles write `Data/Manifest.json` from the `VERSION` and
+  `IMAGE_TAG` build arguments.
 - `RIoT2.Core` 1.0.1 is published on GitHub Packages. To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
@@ -58,7 +62,7 @@ docker build -t riot2-net-node-arm64 -f .\Dockerfile_Arm64 .
 | `Services/NodeEnvironmentValidator.cs` | Startup validation for required environment variables |
 | `Tests/` | MSTest hardware-free integration and unit tests; references `RIoT2.Net.Devices` |
 | `Dockerfile`, `Dockerfile_Arm64` | Production container images; both listen on port 80 |
-| `.github/workflows/main.yml` | Tag-triggered image publish workflow |
+| `.github/workflows/ci.yml`, `release.yml` | CI on every push; image release on a tag |
 
 ## Contracts implemented here
 
