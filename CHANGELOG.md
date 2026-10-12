@@ -5,6 +5,18 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+- Fixed (backlog item 20): `dotnet publish` and a local `docker build` no longer copy local runtime
+  data into the output. `Data/` (node configuration, Firebase service account, price cache),
+  `Logs/`, local `Plugins/` and `appsettings.Development.json` are excluded from publish, and
+  `.dockerignore` excludes `Data`, `Logs` and `Plugins`. Local plugin DLLs are still copied to the
+  build output for debugging; the hand-maintained list of 20 plugin DLLs became one wildcard.
+
+## [1.0.0] - 2026-10-12
+
+Built on `RIoT2.Core` 1.0.1 and .NET 10. Install the Devices and RasPi.Devices `1.0.0` plugins only
+after this image; see the
+[upgrade notes](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/upgrading.md).
+
 - Changed the node target framework and Docker images to .NET 10; arm64 runtime now uses
   `aspnet:10.0-noble-arm64v8`.
 - Changed package pins to `RIoT2.Core` 1.0.1, `Serilog.AspNetCore` 10.0.0 and
@@ -13,11 +25,6 @@ publishes Docker images to GitHub Container Registry.
   `net10.0` provides it.
 - Added a legacy-plugin compatibility fixture that targets `net9.0` intentionally and verifies it
   loads through `PluginLoadContext` in the `net10.0` node.
-- Fixed (backlog item 20): `dotnet publish` and a local `docker build` no longer copy local runtime
-  data into the output. `Data/` (node configuration, Firebase service account, price cache),
-  `Logs/`, local `Plugins/` and `appsettings.Development.json` are excluded from publish, and
-  `.dockerignore` excludes `Data`, `Logs` and `Plugins`. Local plugin DLLs are still copied to the
-  build output for debugging; the hand-maintained list of 20 plugin DLLs became one wildcard.
 - Documentation: `AGENTS.md` is the AI instruction file, `CLAUDE.md` imports it, and operational
   hand-off notes were removed from the README.
 
