@@ -5,6 +5,15 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-13
+
+Async cleanup, part 1 ([I09](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i09-async-cleanup-part-1-s)). Built on `RIoT2.Core` 1.4.0. No deployment change is needed.
+
+- Changed: device reports are published in the order the devices raised them, through a bounded
+  queue of 1,000 (the oldest report is dropped and logged when it is full).
+- Changed: a new plugin package is downloaded with `DownloadPluginPackageAsync`, without blocking a
+  thread while the configuration is applied.
+
 ## [1.2.0] - 2026-10-13
 
 MQTT client robustness ([I08](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i08-mqtt-client-robustness-m)). Built on `RIoT2.Core` 1.3.0. No deployment change is needed.

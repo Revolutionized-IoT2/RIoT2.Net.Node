@@ -170,7 +170,7 @@ async Task ApplyDeviceConfigurationAsync(IServiceProvider services, NodeDeviceCo
                     {
                         nodeLogger.LogInformation($"New plugin package available: {pluginPackageMetadata.ContentDisposition.FileName}. Downloading and saving.");
                         cancellationToken.ThrowIfCancellationRequested();
-                        configurationService.DownloadPluginPackage(desired.PluginPackageUrl);
+                        await configurationService.DownloadPluginPackageAsync(desired.PluginPackageUrl);
                         nodeLogger.LogWarning($"Exiting to restart node and load new plugin package...");
                         services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
                         return;
