@@ -5,6 +5,19 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-13
+
+Typed configuration ([I07](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i07-typed-configuration-s)). Built on `RIoT2.Core` 1.2.0, which also fixes a crash when the MQTT
+service was stopped twice at the same time (I06). No deployment change: the variable names are the
+same.
+
+- Changed: `NodeOptions` reads and validates every setting at startup and replaces
+  `NodeEnvironmentValidator`. A start with missing or invalid settings fails with one message that
+  lists them all, for example `Invalid node configuration: RIOT2_NODE_ID is required; RIOT2_NODE_URL
+  must be an absolute http or https URL.` `ConfigurationService` receives `IOptions<NodeOptions>`.
+  The settings can also come from `appsettings.json` or the command line; environment variables
+  still take precedence over `appsettings.json`.
+
 ## [1.0.2] - 2026-10-12
 
 Restart only changed devices ([I04](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i04-restart-only-changed-devices-s)).

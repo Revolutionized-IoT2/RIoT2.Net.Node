@@ -47,8 +47,8 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
   and arm64 ([CI guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/ci.md)). The Dockerfiles write `Data/Manifest.json` from the `VERSION` and
   `IMAGE_TAG` build arguments.
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
-  replaces only the `INodeMqttService` registration (for the broker port) and sets the `RIOT2_*`
-  variables, so a startup change must keep those tests passing.
+  replaces only the `INodeMqttService` registration (for the broker port) and passes the `RIOT2_*`
+  settings through the host configuration, so a startup change must keep those tests passing.
 - The node pins `RIoT2.Core` 1.1.0 (GitHub Packages). To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
@@ -60,9 +60,9 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 |---|---|
 | `Program.cs` | DI setup, plugin loading, device configuration application and Minimal API endpoints |
 | `PluginLoadContext.cs` | Plugin `AssemblyLoadContext`; shares Core, DI and logging contract assemblies with the host |
-| `Services/ConfigurationService.cs` | Environment-backed node configuration and Debug-only local device configuration |
+| `Services/ConfigurationService.cs` | Node configuration from `IOptions<NodeOptions>`, and Debug-only local device configuration |
 | `Services/MqttBackgroundService.cs` | Hosted MQTT start/stop wrapper; Debug-only local configuration load |
-| `Services/NodeEnvironmentValidator.cs` | Startup validation for required environment variables |
+| `Services/NodeOptions.cs` | Every `RIOT2_*` setting the node reads, validated at startup with Core's `SettingsReader` |
 | `Tests/` | MSTest hardware-free integration and unit tests; references `RIoT2.Net.Devices` |
 | `Dockerfile`, `Dockerfile_Arm64` | Production container images; both listen on port 80 |
 | `.github/workflows/ci.yml`, `release.yml` | CI on every push; image release on a tag |
@@ -81,8 +81,9 @@ The code side of these hub contracts is in this repository:
   Core's `NodeMqttService` handles online, configuration, command and report topics; this host
   wires it into the ASP.NET Core lifetime.
 - [env-vars.md](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/env-vars.md):
-  `Services/NodeEnvironmentValidator.cs`, `Services/ConfigurationService.cs` and the Dockerfiles
-  define the node variables, port and image behaviour.
+  `Services/NodeOptions.cs` and the Dockerfiles define the node variables, port and image
+  behaviour. A new setting is added to `NodeOptions` and to the contract; nothing else reads the
+  environment.
 
 ## Rules
 

@@ -17,7 +17,7 @@ How the node fits into the platform: [architecture overview](https://github.com/
 | Path | Contents |
 |---|---|
 | `Program.cs` | Service registration, plugin loading, configuration application and HTTP endpoints |
-| `Services/` | Environment configuration, MQTT hosted service, environment validation and configuration coordination |
+| `Services/` | Settings (`NodeOptions`), node configuration, MQTT hosted service and configuration coordination |
 | `PluginLoadContext.cs` | Runtime plugin loading with shared host contract assemblies |
 | `Plugins/` | Plugin assemblies copied beside the executable for local/dev runs |
 | `Data/` | Runtime manifests, downloaded plugin zips and development-only local configuration |
@@ -53,7 +53,9 @@ The node participates in these platform contracts:
 
 ## Configuration
 
-The production node is configured with environment variables:
+The production node is configured with environment variables, read once at startup by
+`Services/NodeOptions.cs`. Startup fails with one message that lists every missing or invalid
+setting:
 
 | Variable | Required | Purpose |
 |---|---|---|

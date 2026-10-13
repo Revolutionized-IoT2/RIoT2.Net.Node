@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.Extensions.Options;
 using RIoT2.Core;
 using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces;
@@ -35,13 +36,17 @@ ILoggerFactory logger = LoggerFactory.Create(log =>
 });
 
 Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net.Node");
-NodeEnvironmentValidator.ValidateOrThrow(nodeLogger);
+
+// Every RIOT2_* setting is read and validated here, before anything uses it; an invalid setting
+// stops the start with one message that lists every problem.
+var nodeOptions = Options.Create(NodeOptions.Load(builder.Configuration, nodeLogger));
+builder.Services.AddSingleton(nodeOptions);
 
 //builder.Host.UseSerilog((ctx, lc) => lc
 //    .WriteTo.Console()
 //    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
 
-var _configurationService = new ConfigurationService(nodeLogger);
+var _configurationService = new ConfigurationService(nodeOptions, nodeLogger);
 
 builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(nodeLogger);
 builder.Services.AddSingleton<INodeConfigurationService>(_configurationService);
