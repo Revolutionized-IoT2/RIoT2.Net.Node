@@ -47,8 +47,8 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
   and arm64 ([CI guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/ci.md)). The Dockerfiles write `Data/Manifest.json` from the `VERSION` and
   `IMAGE_TAG` build arguments.
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
-  replaces only the `INodeMqttService` registration (for the broker port) and passes the `RIOT2_*`
-  settings through the host configuration, so a startup change must keep those tests passing.
+  passes the `RIOT2_*` settings through the host configuration and replaces nothing else, so a
+  startup change must keep those tests passing.
 - The node pins `RIoT2.Core` 1.1.0 (GitHub Packages). To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses

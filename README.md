@@ -61,7 +61,8 @@ setting:
 |---|---|---|
 | `RIOT2_NODE_ID` | Yes | Node id and MQTT client id; must match the orchestrator node configuration |
 | `RIOT2_NODE_URL` | Yes | Absolute `http://` or `https://` base URL advertised to the orchestrator |
-| `RIOT2_MQTT_IP` | Yes | MQTT broker host name or IP; the Core MQTT client uses port 1883 |
+| `RIOT2_MQTT_IP` | Yes | MQTT broker host name or IP |
+| `RIOT2_MQTT_PORT` | No | MQTT broker port; default 1883 |
 | `RIOT2_MQTT_USERNAME` | No | MQTT username |
 | `RIOT2_MQTT_PASSWORD` | No | MQTT password |
 

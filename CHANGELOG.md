@@ -5,6 +5,17 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-13
+
+MQTT client robustness ([I08](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i08-mqtt-client-robustness-m)). Built on `RIoT2.Core` 1.3.0. No deployment change is needed.
+
+- Changed: the node publishes and subscribes at QoS 1, keeps at most 10,000 outgoing messages
+  while the broker is unreachable (the oldest are dropped and logged), and logs a failing MQTT
+  handler instead of losing it.
+- Added `RIOT2_MQTT_PORT` (default 1883) for a broker on another port.
+- Added: `/health` reports the broker connection; it is unhealthy (HTTP 503) while the node is
+  disconnected, like the orchestrator's.
+
 ## [1.1.0] - 2026-10-13
 
 Typed configuration ([I07](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i07-typed-configuration-s)). Built on `RIoT2.Core` 1.2.0, which also fixes a crash when the MQTT

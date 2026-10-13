@@ -66,7 +66,7 @@ builder.Services.AddSingleton<DeviceConfigurationCoordinator>(services => new De
     nodeLogger));
 builder.Services.AddHostedService(services => services.GetRequiredService<DeviceConfigurationCoordinator>());
 builder.Services.AddHttpClient("plugin-metadata", client => client.Timeout = TimeSpan.FromSeconds(30));
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks().AddCheck<MqttHealthCheck>("mqtt");
 
 _configurationService.InstallPluginPackage();
 loadPlugins();
