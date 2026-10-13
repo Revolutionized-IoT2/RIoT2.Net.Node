@@ -80,6 +80,10 @@ The tests use a loopback MQTT broker, an HTTP configuration endpoint and simulat
 transports. They do not execute the Docker image, install a real plugin package from a release URL,
 talk to an external orchestrator, or contact physical hardware.
 
+The [end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests) in RIoT2.Tests run this `Program`, with the Devices plugin in
+`Plugins\`, against the Orchestrator and a broker. They run on every RIoT2.Tests push and
+nightly against `main`.
+
 To try an unreleased Core, pack it into `C:\Src\RIoT2\.localfeed` and restore with that folder as
 an extra source. A local package is not a published release.
 
