@@ -35,10 +35,13 @@ ARG VERSION=0.0.0-local
 ARG IMAGE_TAG=ghcr.io/revolutionized-iot2/riot2-node:local
 WORKDIR /app
 COPY --from=publish /app/publish .
-RUN mkdir -p /app/Data \
-    && printf '{ "name": "RIoT2 Node", "date": "%s", "version": "%s", "installedPackageFilename": "%s" }\n' \
-      "$(date -u +%Y-%m-%dT%H:%M:%S)" "$VERSION" "$IMAGE_TAG" > /app/Data/Manifest.json
-ENTRYPOINT ["dotnet", "RIoT2.Net.Node.dll"]
+# The manifest lives outside Data/, because Data/ is a volume: a bind mount would hide the image's
+# copy and a named volume would keep an old one. The entrypoint copies it into Data/ on every start.
+RUN printf '{ "name": "RIoT2 Node", "date": "%s", "version": "%s", "installedPackageFilename": "%s" }\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%S)" "$VERSION" "$IMAGE_TAG" > /app/Manifest.json
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD wget -q -O- "http://127.0.0.1:${ASPNETCORE_HTTP_PORTS%%;*}/health" || exit 1
+ENTRYPOINT ["/bin/sh", "-c", "mkdir -p /app/Data && cp /app/Manifest.json /app/Data/Manifest.json && exec dotnet RIoT2.Net.Node.dll \"$@\"", "riot2-node"]
 
 #Set default environment variables
 ENV ASPNETCORE_ENVIRONMENT=Production

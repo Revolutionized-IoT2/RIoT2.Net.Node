@@ -44,12 +44,15 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 - Every push runs `.github/workflows/ci.yml`: build, the tests (with RIoT2.Net.Devices cloned
   next to this repository), both image builds and a secret scan. A `x.y.z` tag runs
   `release.yml`, which validates and then pushes `ghcr.io/revolutionized-iot2/riot2-node` for amd64
-  and arm64 ([CI guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/ci.md)). The Dockerfiles write `Data/Manifest.json` from the `VERSION` and
-  `IMAGE_TAG` build arguments.
+  and arm64 ([CI guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/ci.md)). The Dockerfiles write `/app/Manifest.json` from the `VERSION` and
+  `IMAGE_TAG` build arguments; the entrypoint copies it to `Data/Manifest.json` on every start,
+  because `Data/` is a volume. Keep the entrypoint a `/bin/sh -c ... exec dotnet` line, so .NET
+  stays PID 1 and receives `docker stop`. Both images have a `HEALTHCHECK` on `/health` (the
+  arm64 image installs `wget` for it).
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
   passes the `RIOT2_*` settings through the host configuration and replaces nothing else, so a
   startup change must keep those tests passing.
-- The node pins `RIoT2.Core` 1.1.0 (GitHub Packages). To try an unreleased Core, restore with
+- The node pins `RIoT2.Core` 1.5.0 (GitHub Packages). To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
   `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`.

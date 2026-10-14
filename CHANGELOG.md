@@ -5,6 +5,17 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-14
+
+Images for the compose install ([I12](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i12-one-command-install-s)). No code, port, user or variable changes.
+
+- Added: both images have a Docker `HEALTHCHECK` on `/health`, which includes the broker
+  connection. The arm64 image installs `wget` for it.
+- Fixed: the version shown for the node came from `Data/Manifest.json` in the image, which a
+  mounted `Data/` hid (bind mount) or kept from the first image (named volume). The image now
+  keeps the manifest at `/app/Manifest.json`, and the entrypoint copies it into `Data/` on every
+  start.
+
 ## [1.3.0] - 2026-10-14
 
 Plugin configuration and conformance ([I10](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i10-plugin-configuration-and-conformance-m)). Built on `RIoT2.Core` 1.5.0. Upgrade the node

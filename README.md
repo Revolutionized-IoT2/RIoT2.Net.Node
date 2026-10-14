@@ -136,7 +136,10 @@ docker run -d --name riot2-net-node -p 80:80 `
 
 The image listens on container port 80 and has no `USER` directive, so it runs as root. The
 published image does not declare volumes; mount `/app/Data`, `/app/Logs` and `/app/Plugins`
-yourself.
+yourself. Its `HEALTHCHECK` calls `/health`, so `docker ps` shows the node as unhealthy while
+it has no broker connection. To run the node together with the rest of the stack, use the
+compose file in [deploy/](https://github.com/Revolutionized-IoT2/.github/tree/main/deploy)
+(`--profile node`, or `compose.node-raspi.yml` on a Raspberry Pi).
 
 ## HTTP endpoints
 
