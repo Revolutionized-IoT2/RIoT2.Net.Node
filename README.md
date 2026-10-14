@@ -40,6 +40,11 @@ after a save in the UI) restarts only the devices whose configuration entry was 
 removed, plus configured devices that are not running. An unchanged configuration leaves every
 device and its in-flight commands alone, and the log says `Device configuration unchanged`.
 
+Commands that carry a `correlationId` (from Orchestrator 1.4.0) are answered on
+`riot2/node/{id}/command/result` with `executed`, `failed`, `unknownCommand`, `rejected` or
+`duplicate` (executed before); a redelivered command runs only once. A command that arrives while its device or the
+configuration isn't ready yet is answered `rejected`, and the orchestrator sends it again.
+
 If no plugin assembly loads, the node logs `NO PLUGINS LOADED` and continues to serve its node
 endpoints. Device functionality is unavailable until a plugin package is installed and the node
 restarts.

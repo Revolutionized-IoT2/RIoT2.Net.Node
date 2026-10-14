@@ -5,6 +5,18 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-14
+
+Command results ([I15](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i15-command-results-and-api-v2-m)). Built on `RIoT2.Core` 1.7.0. No port, user, volume or variable
+changes; the 1.2.0 plugins keep working. Update in any order with the orchestrator.
+
+- Added: the node advertises `command-result/1` and answers every command that carries a
+  `correlationId` (Orchestrator 1.4.0 sends one) on `riot2/node/{id}/command/result`: `executed`,
+  `failed`, `unknownCommand`, `rejected` or `duplicate`. A redelivered command runs only once (a
+  redelivery of a failed command gets the same failure, `duplicate` means it was executed). A
+  command that arrives before the device or its configuration is ready is answered `rejected`, so
+  the orchestrator sends it again.
+
 ## [1.3.1] - 2026-10-14
 
 Images for the compose install ([I12](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i12-one-command-install-s)). No code, port, user or variable changes.

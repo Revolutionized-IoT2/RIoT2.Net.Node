@@ -36,6 +36,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     private readonly Channel<string> _loaded = Channel.CreateUnbounded<string>();
     private readonly Channel<string> _applied = Channel.CreateUnbounded<string>();
     private readonly Channel<Report> _reports = Channel.CreateUnbounded<Report>();
+    private readonly Channel<CommandResult> _results = Channel.CreateUnbounded<CommandResult>();
     private Task _stop;
     private int _revision;
 
@@ -43,6 +44,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     public DeviceService Devices { get; }
     public TestLog Log { get; } = new();
     public ChannelReader<Report> Reports => _reports.Reader;
+    public ChannelReader<CommandResult> CommandResults => _results.Reader;
     public ConcurrentQueue<string> Applied { get; } = new();
     public ConcurrentQueue<DeviceReconfigurationResult> Reconfigurations { get; } = new();
     public const string NodeId = "integration-node";
@@ -104,6 +106,8 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
             var payload = args.ApplicationMessage.ConvertPayloadToString();
             if (args.ApplicationMessage.Topic == Constants.Get(NodeId, MqttTopic.Report))
                 _reports.Writer.TryWrite(Json.Deserialize<Report>(payload));
+            else if (args.ApplicationMessage.Topic == Constants.Get(NodeId, MqttTopic.CommandResult))
+                _results.Writer.TryWrite(CommandResult.Create(payload));
             else
                 _presence.Writer.TryWrite(Json.Deserialize<NodeOnlineMessage>(payload));
             return Task.CompletedTask;
@@ -125,6 +129,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
             await harness._peer.ConnectAsync(harness.PeerOptions);
             await harness._peer.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
                 .WithTopicFilter(Constants.Get(NodeId, MqttTopic.Report))
+                .WithTopicFilter(Constants.Get(NodeId, MqttTopic.CommandResult))
                 .WithTopicFilter(Constants.Get(NodeId, MqttTopic.NodeOnline)).Build());
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             harness._broker.ClientSubscribedTopicAsync += args =>
@@ -184,6 +189,18 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
 
     public Task CommandAsync(string id, bool value = true) =>
         PublishAsync(MqttTopic.Command, Json.Serialize(new { id, value }));
+
+    /// <summary>A command as the orchestrator's outbox sends it (design 7.1).</summary>
+    public Task CorrelatedCommandAsync(string id, string correlationId, bool value = true) =>
+        PublishAsync(MqttTopic.Command, Json.SerializeIgnoreNulls(new Command { Id = id, Value = new ValueModel(value), CorrelationId = correlationId }));
+
+    /// <summary>Makes the node announce itself again and returns its presence message.</summary>
+    public async Task<NodeOnlineMessage> PresenceAsync()
+    {
+        while (_presence.Reader.TryRead(out _)) { }
+        await PublishAsync(MqttTopic.OrchestratorOnline, "{}");
+        return await ReadAsync(_presence.Reader);
+    }
 
     public async Task BarrierAsync()
     {

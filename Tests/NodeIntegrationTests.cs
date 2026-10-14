@@ -244,7 +244,7 @@ public class NodeIntegrationTests
         Assert.IsFalse(node.Log.Entries.Any(e => e.Level >= LogLevel.Error));
     }
 
-    private sealed class BlockingLegacyCommands : ICommandService, IDisposable
+    internal sealed class BlockingLegacyCommands : ICommandService, IDisposable
     {
         private int _calls;
         public int Calls => Volatile.Read(ref _calls);
