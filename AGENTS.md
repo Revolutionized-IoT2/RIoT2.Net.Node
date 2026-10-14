@@ -59,7 +59,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 | Path | Contents |
 |---|---|
 | `Program.cs` | DI setup, plugin loading, device configuration application and Minimal API endpoints |
-| `PluginLoadContext.cs` | Plugin `AssemblyLoadContext`; shares Core, DI and logging contract assemblies with the host |
+| `PluginLoadContext.cs` | Plugin `AssemblyLoadContext`; shares the assemblies in Core's `PluginHostContract` with the host |
 | `Services/ConfigurationService.cs` | Node configuration from `IOptions<NodeOptions>`, and Debug-only local device configuration |
 | `Services/MqttBackgroundService.cs` | Hosted MQTT start/stop wrapper; Debug-only local configuration load |
 | `Services/NodeOptions.cs` | Every `RIOT2_*` setting the node reads, validated at startup with Core's `SettingsReader` |
@@ -94,9 +94,14 @@ The code side of these hub contracts is in this repository:
 - Validate environment variables before startup. `RIOT2_NODE_ID`, `RIOT2_NODE_URL` and
   `RIOT2_MQTT_IP` must remain required, and `RIOT2_NODE_URL` must be absolute `http`/`https`.
 - Load plugins only from `Plugins/` next to the executable. A plugin must expose exactly one
-  `IDevicePlugin` type and register its devices in `Initialize(IServiceCollection)`.
-- Keep `PluginLoadContext` sharing the host's `RIoT2.Core`, DI and logging assemblies. Plugin-local
-  copies of these assemblies must not create incompatible `IDevice` or async lifecycle types.
+  `IDevicePlugin` type (normally derived from Core's `PluginBase`) and register its devices in
+  `Initialize(IServiceCollection)`. The node adds the plugin's controllers; it never reads the
+  obsolete `IDevicePlugin.Devices`.
+- `PluginLoadContext` shares the assemblies in Core's `PluginHostContract.SharedAssemblyPrefixes`
+  with plugins; change that list in Core, not here. Plugin-local copies of these assemblies must
+  not create incompatible `IDevice` or async lifecycle types.
+- The templates endpoint uses Core's `DeviceTemplates.Create`, the same code the plugins'
+  conformance test checks. Don't build templates in the node.
 - New I/O-heavy devices should use `AsyncDeviceBase` / `IAsyncCommandDevice`. Do not add
   untracked background tasks, `async void` lifecycle methods or blocking waits in host code.
 - Commands must remain admitted without awaiting device I/O in the MQTT receive callback. Preserve

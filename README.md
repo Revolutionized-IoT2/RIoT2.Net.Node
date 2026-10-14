@@ -18,7 +18,7 @@ How the node fits into the platform: [architecture overview](https://github.com/
 |---|---|
 | `Program.cs` | Service registration, plugin loading, configuration application and HTTP endpoints |
 | `Services/` | Settings (`NodeOptions`), node configuration, MQTT hosted service and configuration coordination |
-| `PluginLoadContext.cs` | Runtime plugin loading with shared host contract assemblies |
+| `PluginLoadContext.cs` | Runtime plugin loading; shares the assemblies in Core's `PluginHostContract` |
 | `Plugins/` | Plugin assemblies copied beside the executable for local/dev runs |
 | `Data/` | Runtime manifests, downloaded plugin zips and development-only local configuration |
 | `Tests/` | Hardware-free MSTest integration and unit tests |
@@ -30,8 +30,8 @@ At startup the node:
 
 1. Validates `RIOT2_NODE_ID`, `RIOT2_NODE_URL` and `RIOT2_MQTT_IP`.
 2. Installs the first plugin zip found in `Data/`, replacing the contents of `Plugins/`.
-3. Loads plugin assemblies from `Plugins/`, discovers `IDevicePlugin`, and lets the plugin register
-   devices and controllers.
+3. Loads plugin assemblies from `Plugins/`, discovers `IDevicePlugin`, lets the plugin register its
+   services and devices, and adds the plugin's controllers.
 4. Starts MQTT and the scheduler, announces itself online and applies device configuration from the
    orchestrator.
 

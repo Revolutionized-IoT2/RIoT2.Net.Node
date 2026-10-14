@@ -1,18 +1,12 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.Loader;
-using RIoT2.Core.Interfaces;
+using RIoT2.Core.Plugins;
 
 namespace RIoT2.Net.Node
 {
     class PluginLoadContext : AssemblyLoadContext
     {
         private AssemblyDependencyResolver _resolver;
-        private static readonly Assembly[] SharedContracts =
-        [
-            typeof(IDevice).Assembly,
-            typeof(IServiceCollection).Assembly,
-            typeof(ILogger).Assembly
-        ];
 
         public PluginLoadContext(string pluginPath)
         {
@@ -21,9 +15,13 @@ namespace RIoT2.Net.Node
 
         protected override Assembly Load(AssemblyName assemblyName)
         {
-            var shared = SharedContracts.FirstOrDefault(assembly => assembly.GetName().Name == assemblyName.Name);
-            if (shared != null)
-                return shared;
+            // Shared contracts always come from the node, whatever version the plugin was built against.
+            if (PluginHostContract.IsShared(assemblyName.Name))
+            {
+                return Default.Assemblies.FirstOrDefault(assembly => assembly.GetName().Name == assemblyName.Name)
+                    ?? Default.LoadFromAssemblyName(new AssemblyName(assemblyName.Name));
+            }
+
             string assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
             if (assemblyPath != null)
             {

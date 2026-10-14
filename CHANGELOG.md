@@ -5,6 +5,19 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-14
+
+Plugin configuration and conformance ([I10](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i10-plugin-configuration-and-conformance-m)). Built on `RIoT2.Core` 1.5.0. Upgrade the node
+before the Devices and RasPi.Devices `1.2.0` plugins: they are built on `PluginBase`, which an older
+node doesn't have. Older plugins keep loading.
+
+- Changed: `PluginLoadContext` shares the assemblies listed in Core's
+  `PluginHostContract.SharedAssemblyPrefixes` (`RIoT2.Core*` and the DI and logging abstractions),
+  instead of a list of its own.
+- Changed: `GET /api/device/configuration/templates` builds each template with Core's
+  `DeviceTemplates.Create`. Fixed: the default template of a refreshable device without its own
+  template had the schedule `0 * * * *`, which Quartz rejects; it is now `0 * * ? * * *`.
+
 ## [1.2.1] - 2026-10-13
 
 Async cleanup, part 1 ([I09](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-0-1.md#i09-async-cleanup-part-1-s)). Built on `RIoT2.Core` 1.4.0. No deployment change is needed.

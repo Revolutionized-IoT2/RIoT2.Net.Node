@@ -6,6 +6,7 @@ using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces;
 using RIoT2.Core.Interfaces.Services;
 using RIoT2.Core.Models;
+using RIoT2.Core.Plugins;
 using RIoT2.Core.Services;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
@@ -237,36 +238,13 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
     List<DeviceConfiguration> templates = [];
     foreach (var d in deviceService.Devices)
     {
-        if (d is IDeviceWithConfiguration)
+        try
         {
-            try
-            {
-                var template = (d as IDeviceWithConfiguration).GetConfigurationTemplate();
-
-                //Devices that opt in to Matter declare their endpoints against this same template instance,
-                //so the report/command template ids they reference are the ones that get persisted.
-                if (d is IMatterDevice matterDevice)
-                    template.MatterEndpoints = matterDevice.GetMatterEndpoints(template)?.ToList();
-
-                templates.Add(template);
-            }
-            catch (Exception x)
-            {
-                logger.LogError(x, $"Error while getting configuration template for device: {d.Name} [{d.Id}]");
-            }
+            templates.Add(DeviceTemplates.Create(d));
         }
-        else //Add default configuration template
+        catch (Exception x)
         {
-            templates.Add(new DeviceConfiguration()
-            {
-                ClassFullName = d.GetType().FullName,
-                Id = Guid.NewGuid().ToString(),
-                Name = d.GetType().Name,
-                RefreshSchedule = (d is IRefreshableReportDevice) ? "0 * * * *" : null,
-                CommandTemplates = (d is ICommandDevice) ? [] : null,
-                ReportTemplates = [],
-                DeviceParameters = []
-            });
+            logger.LogError(x, $"Error while getting configuration template for device: {d.Name} [{d.Id}]");
         }
     }
     return Results.Ok(templates);
