@@ -48,7 +48,7 @@ public class NodeOptionsTests
             Mqtt = new MqttOptions { Host = "broker", Username = "user", Password = "secret" }
         };
 
-        var configuration = new ConfigurationService(Microsoft.Extensions.Options.Options.Create(options), null).Configuration;
+        var configuration = new ConfigurationService(Microsoft.Extensions.Options.Options.Create(options), null, Path.GetTempPath()).Configuration;
 
         Assert.AreEqual("node-1", configuration.Id);
         Assert.AreEqual("http://node", configuration.Url);

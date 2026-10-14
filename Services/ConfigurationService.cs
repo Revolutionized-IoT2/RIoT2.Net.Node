@@ -9,15 +9,21 @@ namespace RIoT2.Net.Node.Services
     internal class ConfigurationService : NodeConfigurationServiceBase, INodeConfigurationService
     {
         private readonly NodeOptions _options;
+        private readonly string _dataFolder;
         private NodeConfiguration _configuration;
         private ILogger _logger;
 
-        public ConfigurationService(IOptions<NodeOptions> options, ILogger logger) 
+        /// <param name="dataFolder">The node's <c>Data</c> folder (in the image <c>/app/Data</c>, a volume); the last applied configuration is saved there.</param>
+        public ConfigurationService(IOptions<NodeOptions> options, ILogger logger, string dataFolder)
         {
             ArgumentNullException.ThrowIfNull(options);
+            ArgumentException.ThrowIfNullOrEmpty(dataFolder);
             _options = options.Value;
             _logger = logger;
+            _dataFolder = dataFolder;
         }
+
+        protected override string AppliedConfigurationPath => Path.Combine(_dataFolder, "configuration.applied.json");
 
         public override NodeConfiguration Configuration 
         {

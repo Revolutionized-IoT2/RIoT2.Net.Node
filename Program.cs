@@ -47,7 +47,7 @@ builder.Services.AddSingleton(nodeOptions);
 //    .WriteTo.Console()
 //    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
 
-var _configurationService = new ConfigurationService(nodeOptions, nodeLogger);
+var _configurationService = new ConfigurationService(nodeOptions, nodeLogger, Path.Combine(builder.Environment.ContentRootPath, "Data"));
 
 builder.Services.AddSingleton<Microsoft.Extensions.Logging.ILogger>(nodeLogger);
 builder.Services.AddSingleton<INodeConfigurationService>(_configurationService);
@@ -60,9 +60,14 @@ builder.Services.AddHostedService(p => p.GetRequiredService<MqttBackgroundServic
 builder.Services.AddHostedService<DeviceSchedulerService>();
 
 var pluginsLoaded = false;
+builder.Services.AddSingleton(services => new DeviceConfigurationApplier(
+    _configurationService,
+    (DeviceServiceBase)services.GetRequiredService<IDeviceService>(),
+    (configuration, token) => UpdatePluginPackageAsync(services, configuration, token),
+    nodeLogger));
 builder.Services.AddSingleton<DeviceConfigurationCoordinator>(services => new DeviceConfigurationCoordinator(
     _configurationService,
-    (configuration, token) => ApplyDeviceConfigurationAsync(services, configuration, token),
+    (configuration, token) => services.GetRequiredService<DeviceConfigurationApplier>().ApplyAsync(configuration, token),
     token => ((IAsyncDeviceService)services.GetRequiredService<IDeviceService>()).StopAllDevicesAsync(token),
     nodeLogger));
 builder.Services.AddHostedService(services => services.GetRequiredService<DeviceConfigurationCoordinator>());
@@ -88,6 +93,22 @@ if (pluginsLoaded)
 else
 {
     nodeLogger.LogCritical("NO PLUGINS LOADED. Starting without plugins...");
+}
+
+_configurationService.ConfigurationStatus.SetPluginManifest(_configurationService.Configuration.PluginManifest);
+
+// Start with the last applied configuration, so the devices run even while the orchestrator is down (design 7.2).
+try
+{
+    var saved = _configurationService.LoadAppliedConfiguration();
+    if (saved == null)
+        nodeLogger.LogInformation("No saved configuration; waiting for the orchestrator.");
+    else
+        nodeLogger.LogInformation("Starting with the saved configuration, revision {Revision}.", saved.Revision?.ToString() ?? "n/a");
+}
+catch (Exception x)
+{
+    nodeLogger.LogError(x, "Could not read the saved configuration; waiting for the orchestrator.");
 }
 
 var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
@@ -118,7 +139,8 @@ void loadPlugins()
 
                 //Initialize plugin
                 var atypes = pluginAssembly.GetTypes();
-                var pluginClass = atypes.SingleOrDefault(t => t.GetInterface(nameof(IDevicePlugin)) != null);
+                // Abstract types such as Core's PluginBase implement the interface too, but aren't plugins.
+                var pluginClass = atypes.SingleOrDefault(t => !t.IsAbstract && t.GetInterface(nameof(IDevicePlugin)) != null);
                 if (pluginClass != null)
                 {
                     try
@@ -148,8 +170,9 @@ void loadPlugins()
     }
 }
 
-//this is called when node receives a new configuration for devices
-async Task ApplyDeviceConfigurationAsync(IServiceProvider services, NodeDeviceConfiguration desired, CancellationToken cancellationToken)
+// Called before every configuration is applied. Returns true when a new plugin package was downloaded
+// and the node is restarting to install it.
+async Task<bool> UpdatePluginPackageAsync(IServiceProvider services, NodeDeviceConfiguration desired, CancellationToken cancellationToken)
 {
     nodeLogger.LogInformation("Device configuration updated.");
     var configurationService = services.GetRequiredService<INodeConfigurationService>();
@@ -174,7 +197,7 @@ async Task ApplyDeviceConfigurationAsync(IServiceProvider services, NodeDeviceCo
                         await configurationService.DownloadPluginPackageAsync(desired.PluginPackageUrl);
                         nodeLogger.LogWarning($"Exiting to restart node and load new plugin package...");
                         services.GetRequiredService<IHostApplicationLifetime>().StopApplication();
-                        return;
+                        return true;
                     }
                 }
             }
@@ -193,13 +216,7 @@ async Task ApplyDeviceConfigurationAsync(IServiceProvider services, NodeDeviceCo
     {
         nodeLogger.LogWarning("Could not load plugin package. No device configuration available Or no plugin package URL specified.");
     }
-
-    var deviceService = (DeviceServiceBase)services.GetRequiredService<IDeviceService>();
-    var result = await deviceService.ReconfigureChangedDevicesAsync(desired?.DeviceConfigurations, cancellationToken);
-    if (result.NothingChanged)
-        nodeLogger.LogInformation("Device configuration unchanged; no device restarted.");
-    else
-        nodeLogger.LogInformation("Device configuration applied: {Result}. Inspect device status for individual startup failures.", result);
+    return false;
 }
 
 app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>

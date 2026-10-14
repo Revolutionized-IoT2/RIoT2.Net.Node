@@ -52,7 +52,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
   passes the `RIOT2_*` settings through the host configuration and replaces nothing else, so a
   startup change must keep those tests passing.
-- The node pins `RIoT2.Core` 1.7.0 (GitHub Packages). Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. To try an unreleased Core, restore with
+- The node pins `RIoT2.Core` 1.8.0 (GitHub Packages). Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
   `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`.
@@ -128,6 +128,10 @@ The code side of these hub contracts is in this repository:
   fixed 2026-10-12). Local `Plugins/*.dll` are still copied to the build output for debugging.
   Don't remove these exclusions: `Data/` holds `local.configuration.json` and the Firebase
   service-account JSON.
+- The saved configuration lives in `Data/` under the host's **content root** (`/app/Data` in the
+  image, the working directory locally), while manifests, plugin zips and `Plugins/` are found
+  next to the executable. In the image both are `/app`. The end-to-end harness relies on the
+  content root to give each test node its own `Data/`.
 - The Docker images listen on port 80 (`ASPNETCORE_HTTP_PORTS=80`) and run as root because no
   `USER` is set. That is intentional for Raspberry Pi GPIO/D-Bus-style host privileges.
 - Plugins load only once at startup from `Plugins/` next to the executable. The first `Data/*.zip`

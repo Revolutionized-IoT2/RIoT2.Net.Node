@@ -20,7 +20,7 @@ How the node fits into the platform: [architecture overview](https://github.com/
 | `Services/` | Settings (`NodeOptions`), node configuration, MQTT hosted service and configuration coordination |
 | `PluginLoadContext.cs` | Runtime plugin loading; shares the assemblies in Core's `PluginHostContract` |
 | `Plugins/` | Plugin assemblies copied beside the executable for local/dev runs |
-| `Data/` | Runtime manifests, downloaded plugin zips and development-only local configuration |
+| `Data/` | Runtime manifests, downloaded plugin zips, the saved configuration (`configuration.applied.json`) and development-only local configuration |
 | `Tests/` | Hardware-free MSTest integration and unit tests |
 | `Dockerfile`, `Dockerfile_Arm64` | amd64 and arm64 production images |
 
@@ -32,13 +32,21 @@ At startup the node:
 2. Installs the first plugin zip found in `Data/`, replacing the contents of `Plugins/`.
 3. Loads plugin assemblies from `Plugins/`, discovers `IDevicePlugin`, lets the plugin register its
    services and devices, and adds the plugin's controllers.
-4. Starts MQTT and the scheduler, announces itself online and applies device configuration from the
-   orchestrator.
+4. Applies the configuration it saved last (`Data/configuration.applied.json` under the content
+   root, `/app/Data` in the image), so its devices run even while the orchestrator is down.
+5. Starts MQTT and the scheduler, publishes its configuration status and its presence (both
+   retained) and applies the device configuration from the orchestrator.
 
-Every configuration message (on startup, on each MQTT reconnect, after an orchestrator restart and
-after a save in the UI) restarts only the devices whose configuration entry was added, changed or
-removed, plus configured devices that are not running. An unchanged configuration leaves every
-device and its in-flight commands alone, and the log says `Device configuration unchanged`.
+The orchestrator sends a configuration command on startup, on each MQTT reconnect, after an
+orchestrator restart and after a save in the UI. From Orchestrator 1.5.0 it carries the
+configuration's `hash`: when the node already runs it with every device running, the node only
+publishes its status, without downloading anything. Otherwise the node downloads the configuration
+and restarts only the devices whose entry was added, changed or removed, plus configured devices
+that are not running; an unchanged configuration leaves every device and its in-flight commands
+alone, and the log says `Device configuration unchanged`. If the download fails, the node keeps
+its configuration and reports `failed`. The status (`riot2/node/{id}/status`: `applying`,
+`applied` with the devices that aren't running, `failed`, `pendingRestart`) feeds the sync state
+that the orchestrator reports in `GET /api/nodes`.
 
 Commands that carry a `correlationId` (from Orchestrator 1.4.0) are answered on
 `riot2/node/{id}/command/result` with `executed`, `failed`, `unknownCommand`, `rejected` or

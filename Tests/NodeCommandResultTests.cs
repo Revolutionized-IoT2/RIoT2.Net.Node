@@ -21,7 +21,7 @@ public class NodeCommandResultTests
         await using var node = await NodeIntegrationHarness.StartAsync();
         var presence = await node.PresenceAsync();
         Assert.IsTrue(presence.HasCapability(Contract.Capabilities.CommandResult));
-        Assert.IsFalse(presence.HasCapability(Contract.Capabilities.DesiredState), "Desired state comes with I16.");
+        Assert.IsTrue(presence.HasCapability(Contract.Capabilities.DesiredState), "Since I16.");
     }
 
     [TestMethod]

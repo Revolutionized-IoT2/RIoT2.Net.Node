@@ -5,6 +5,26 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-14
+
+Desired-state configuration ([I16](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i16-desired-state-configuration-for-net-nodes-m)). Built on `RIoT2.Core` 1.8.0. No port, user,
+volume or variable changes; the 1.2.0 plugins keep working. Update in any order with the
+orchestrator.
+
+- Added: the node advertises `desired-state/1` and publishes its configuration status, retained,
+  on `riot2/node/{id}/status`. A configuration command whose `hash` it already runs (Orchestrator
+  1.5.0) is answered with the status, without a download or a plugin package check, so reconnects
+  and orchestrator restarts cost nothing.
+- Added: the applied configuration is saved to `Data/configuration.applied.json` (under the
+  content root: `/app/Data` in the image) and applied at the next start, before the node connects,
+  so devices run while the orchestrator is down.
+- Changed: a failed configuration download keeps the current configuration and is reported as
+  `failed`; before, it was ignored silently.
+- Changed: the node's presence and last will are retained, like the firmware's.
+- Fixed: the plugin loader no longer tries to create abstract types such as Core's `PluginBase`,
+  which logged `Failed loading plugin` at every start when `RIoT2.Core.dll` was in `Plugins/`.
+- Changed: applying a configuration moved from `Program.cs` to `Services/DeviceConfigurationApplier.cs`.
+
 ## [1.4.0] - 2026-10-14
 
 Command results ([I15](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i15-command-results-and-api-v2-m)). Built on `RIoT2.Core` 1.7.0. No port, user, volume or variable
