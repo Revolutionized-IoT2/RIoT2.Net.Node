@@ -5,6 +5,19 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-01
+
+System.Text.Json on the wire ([I25](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i25-systemtextjson-on-the-wire-m)), with RIoT2.Core 1.11.0. No port, user, volume or
+variable changes, and the MQTT and HTTP JSON is the same.
+
+- Changed: plugins run on Core 1.11.0, whose `Json` helpers use System.Text.Json. A plugin built
+  for an older Core keeps working (the legacy-plugin test proves it, and the Devices and RasPi
+  tests pass on 1.11.0). What a plugin can notice: an `object` member read from JSON holds a
+  `JsonElement` for an object or array (it was a `JObject`), invalid JSON throws
+  `System.Text.Json.JsonException`, and `FindValue`/`SetValue` support a JSONPath subset (see the
+  Core changelog).
+- Changed: the Debug-only local configuration file is read with `Json.Deserialize`.
+
 ## [1.7.0] - 2026-11-01
 
 Metrics ([I22](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i22-metrics-m), design 7.4 phase 4), with RIoT2.Core 1.10.0.

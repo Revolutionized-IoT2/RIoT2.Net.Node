@@ -58,7 +58,7 @@ namespace RIoT2.Net.Node.Services
 
                 var result = await System.IO.File.ReadAllBytesAsync(localConfigFile.FullName);
 
-                SetDeviceConfiguration(Json.DeserializeAutoTypeNameHandling<NodeDeviceConfiguration>(System.Text.Encoding.UTF8.GetString(result)));
+                SetDeviceConfiguration(Json.Deserialize<NodeDeviceConfiguration>(System.Text.Encoding.UTF8.GetString(result)));
             }
             catch (Exception e)
             {

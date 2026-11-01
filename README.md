@@ -7,7 +7,7 @@ endpoints consumed by the orchestrator.
 
 - Type: ASP.NET Core web application
 - Target framework: `net10.0`
-- Core package: `RIoT2.Core` 1.1.0
+- Core package: `RIoT2.Core` 1.11.0
 - Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
 How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
