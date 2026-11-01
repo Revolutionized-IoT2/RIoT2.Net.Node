@@ -5,6 +5,17 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-01
+
+Narrow Core references ([I28](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i28-narrow-references-and-generated-models-m), plan M1 step 4), with RIoT2.Core 1.14.0. No port, user, volume,
+variable or JSON changes.
+
+- Changed: the node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting`, and ships the
+  `RIoT2.Core` facade only at run time (`ExcludeAssets="compile"`), so plugins built before Core
+  1.13.0 still load (`PluginCompatibilityTests`).
+- Note: plugins built against Core 1.14.0 (RIoT2.Net.Devices and RIoT2.Net.RasPi.Devices 1.3.0)
+  need this version: a node with an older Core doesn't load them. Update the node first.
+
 ## [1.9.0] - 2026-11-01
 
 Core package split ([I27](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i27-core-package-split-m)), with RIoT2.Core 1.13.0. No port, user, volume, variable or JSON

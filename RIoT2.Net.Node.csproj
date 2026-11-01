@@ -22,8 +22,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="RIoT2.Core" />
+    <PackageReference Include="RIoT2.Core.Node" />
     <PackageReference Include="RIoT2.Core.Hosting" />
+    <!-- Plugins built before Core 1.13.0 reference RIoT2.Core, whose forwards resolve their types
+         (plan M1 step 3). The node ships the facade but doesn't compile against it (step 4);
+         removed in Core 2.0 (I45). -->
+    <PackageReference Include="RIoT2.Core" ExcludeAssets="compile" />
   </ItemGroup>
 
   <ItemGroup>

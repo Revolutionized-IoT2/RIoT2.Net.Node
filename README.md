@@ -7,7 +7,8 @@ endpoints consumed by the orchestrator.
 
 - Type: ASP.NET Core web application
 - Target framework: `net10.0`
-- Core package: `RIoT2.Core` 1.13.0 (the facade over the split Core packages)
+- Core packages: `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.14.0, plus the `RIoT2.Core` facade at
+  run time only, for plugins built before Core 1.13.0
 - Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
 How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
@@ -192,9 +193,10 @@ Loaded plugin controllers can add their own routes, such as the default devices 
 - Update the Node image before installing `net10.0` plugin zips. A `net10.0` plugin cannot load
   into a `net9.0` node, while the compatibility tests prove a `net9.0` plugin can load into the
   `net10.0` node.
-- Release the Node image and the plugin packages together. Plugins run with the Node host's
-  `RIoT2.Core*` assemblies, so package drift can become runtime drift. Plugins built against a
-  RIoT2.Core from before the 1.13.0 package split resolve their types through the facade.
+- Release the Node image and the plugin packages together, node first. Plugins run with the Node
+  host's `RIoT2.Core*` assemblies: a plugin built against a newer Core than the node's doesn't
+  load (plugins on Core 1.14.0 need Node 1.10.0). Plugins built against a RIoT2.Core from before
+  the 1.13.0 package split resolve their types through the facade.
 
 ## Contributing
 
