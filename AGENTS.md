@@ -116,6 +116,10 @@ The code side of these hub contracts is in this repository:
 - Keep `PackageReference` items versionless; package versions belong in `Directory.Packages.props`.
 - Do not commit or document real values from `Data/`, `Properties/launchSettings.json` or local
   MQTT/device configuration.
+- Logging comes from `builder.AddRIoT2Logging()` (RIoT2.Core.Hosting): don't add Serilog sinks,
+  logging providers or `Logging` sections to `appsettings.json`; `RIOT2_LOG_FORMAT` and
+  `RIOT2_LOG_LEVEL` are the settings. Log through `ILogger`, and wrap work for one command or
+  trigger in `logger.BeginIdScope(LogScope.CorrelationId | LogScope.MessageId, id)`.
 
 ## Pitfalls
 

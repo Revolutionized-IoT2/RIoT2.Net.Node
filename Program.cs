@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Options;
 using RIoT2.Core;
 using RIoT2.Core.Abstracts;
+using RIoT2.Core.Hosting;
 using RIoT2.Core.Interfaces;
 using RIoT2.Core.Interfaces.Services;
 using RIoT2.Core.Models;
@@ -10,7 +11,6 @@ using RIoT2.Core.Plugins;
 using RIoT2.Core.Services;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
-using Serilog;
 using System.Reflection;
 using System.Text.Json;
 
@@ -24,17 +24,10 @@ builder.Services.Configure<JsonOptions>(o =>
     o.JsonSerializerOptions.WriteIndented = true;
 });
 
-var serilog = new LoggerConfiguration()
-   .WriteTo.Console()
-   .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true)
-   .CreateLogger();
-
-
-ILoggerFactory logger = LoggerFactory.Create(log =>
-{
-    log.AddSerilog(serilog);
-
-});
+// Console and Logs/RIoT2.log, text or JSON (RIOT2_LOG_FORMAT, RIOT2_LOG_LEVEL; design 7.4). Loggers
+// from this factory forward to the host's once it exists, so nodeLogger, the plugins' loggers and every
+// ILogger<T> share providers and log scopes (a command's correlation id reaches the device's lines).
+ILoggerFactory logger = builder.AddRIoT2Logging("node");
 
 Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net.Node");
 
@@ -42,10 +35,6 @@ Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net
 // stops the start with one message that lists every problem.
 var nodeOptions = Options.Create(NodeOptions.Load(builder.Configuration, nodeLogger));
 builder.Services.AddSingleton(nodeOptions);
-
-//builder.Host.UseSerilog((ctx, lc) => lc
-//    .WriteTo.Console()
-//    .WriteTo.File("Logs/RIoT2.log", rollingInterval: RollingInterval.Day, outputTemplate: "{Timestamp:dd.MM.yyyy HH:mm:ss.fff} [{Level}] {Message:lj}{NewLine}{Exception}", shared: true));
 
 var _configurationService = new ConfigurationService(nodeOptions, nodeLogger, Path.Combine(builder.Environment.ContentRootPath, "Data"));
 

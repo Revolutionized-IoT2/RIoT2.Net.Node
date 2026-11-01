@@ -5,6 +5,20 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-01
+
+Consistent logging ([I20](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i20-consistent-logging-s), design 7.4 phase 2), with RIoT2.Core 1.9.0.
+
+- Changed: logging comes from `AddRIoT2Logging()` (RIoT2.Core.Hosting). The console and
+  `Logs/RIoT2.log` get the same lines, in a new format (`<time> [INF] <category>: <message>`),
+  or compact JSON with `RIOT2_LOG_FORMAT=json`; `RIOT2_LOG_LEVEL` sets the level. Files roll
+  daily and at 50 MB, 14 are kept (before: daily, no limit). The node's logger and the plugins'
+  loggers share the host's pipeline, so ASP.NET Core's messages are in the file too.
+- Added: a command's `correlationId` is on every line logged while it runs, the device's
+  included (Core's `NodeMqttService`).
+- Removed: the `Logging` sections of `appsettings.json` and the direct Serilog package
+  references.
+
 ## [1.5.0] - 2026-10-14
 
 Desired-state configuration ([I16](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i16-desired-state-configuration-for-net-nodes-m)). Built on `RIoT2.Core` 1.8.0. No port, user,

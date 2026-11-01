@@ -23,8 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="RIoT2.Core" />
-    <PackageReference Include="Serilog.AspNetCore" />
-    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="RIoT2.Core.Hosting" />
   </ItemGroup>
 
   <ItemGroup>

@@ -78,8 +78,12 @@ setting:
 | `RIOT2_MQTT_PORT` | No | MQTT broker port; default 1883 |
 | `RIOT2_MQTT_USERNAME` | No | MQTT username |
 | `RIOT2_MQTT_PASSWORD` | No | MQTT password |
+| `RIOT2_LOG_FORMAT` | No | `text` (default) or `json` for the console and `Logs/RIoT2.log` |
+| `RIOT2_LOG_LEVEL` | No | `Trace` … `Critical`; default `Information` |
 
-Debug builds are special: they load `Data/local.configuration.json` and ignore the normal MQTT
+Logs go to the console and to `Logs/RIoT2.log` (`/app/Logs`), rolled daily and at 50 MB, 14 files
+kept, through `AddRIoT2Logging()` from `RIoT2.Core.Hosting`. While a command runs, every line,
+including the device's own, ends with `[CorrelationId=…]`.: they load `Data/local.configuration.json` and ignore the normal MQTT
 configuration message path. That file can hold real credentials. Use Release for integration tests,
 screenshots and real-device runs.
 
