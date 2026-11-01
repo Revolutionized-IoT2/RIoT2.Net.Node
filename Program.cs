@@ -31,6 +31,10 @@ ILoggerFactory logger = builder.AddRIoT2Logging("node");
 
 Microsoft.Extensions.Logging.ILogger nodeLogger = logger.CreateLogger("RIoT2.Net.Node");
 
+// Metrics (riot2.node.*, riot2.mqtt.*) and, with RIOT2_TRACING=true, traces over OTLP, only when
+// OTEL_EXPORTER_OTLP_ENDPOINT is set (design 7.4).
+builder.AddRIoT2Telemetry("node", builder.Configuration[NodeOptions.IdVariable], RIoT2.Core.Diagnostics.MeterNames.Node);
+
 // Every RIOT2_* setting is read and validated here, before anything uses it; an invalid setting
 // stops the start with one message that lists every problem.
 var nodeOptions = Options.Create(NodeOptions.Load(builder.Configuration, nodeLogger));

@@ -5,6 +5,17 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-01
+
+Metrics ([I22](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i22-metrics-m), design 7.4 phase 4), with RIoT2.Core 1.10.0.
+No port, user or volume changes; plugins built for Core 1.9 keep working.
+
+- Added: `OTEL_EXPORTER_OTLP_ENDPOINT` exports `riot2.node.devices` (by state), `riot2.node.device_restarts`,
+  `riot2.node.commands` (by outcome), `riot2.node.reports.published`/`dropped`, `riot2.node.config_applies`
+  (applied, failed, unchanged), `riot2.mqtt.*`, ASP.NET Core and runtime metrics over OTLP, with the node
+  id as `service.instance.id`; `RIOT2_TRACING=true` adds traces. Unset, nothing is exported.
+- Fixed: the README's paragraph on Debug builds, which lost its first words in 1.6.0.
+
 ## [1.6.0] - 2026-11-01
 
 Consistent logging ([I20](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i20-consistent-logging-s), design 7.4 phase 2), with RIoT2.Core 1.9.0.

@@ -21,6 +21,9 @@ namespace RIoT2.Net.Node.Services
         /// <summary><c>RIOT2_LOG_FORMAT</c> and <c>RIOT2_LOG_LEVEL</c>, applied by <c>AddRIoT2Logging()</c> (design 7.4).</summary>
         public LoggingOptions Logging { get; set; } = new();
 
+        /// <summary><c>OTEL_EXPORTER_OTLP_ENDPOINT</c> and <c>RIOT2_TRACING</c>, applied by <c>AddRIoT2Telemetry()</c> (design 7.4).</summary>
+        public TelemetryOptions Telemetry { get; set; } = new();
+
         /// <summary>
         /// Reads and validates the settings, and throws <see cref="ConfigurationValidationException"/>
         /// listing every problem (logged as critical) when any is missing or invalid.
@@ -33,7 +36,8 @@ namespace RIoT2.Net.Node.Services
                 Id = settings.Required(IdVariable),
                 Url = settings.RequiredHttpUrl(UrlVariable),
                 Mqtt = MqttOptions.Read(settings),
-                Logging = LoggingOptions.Read(settings)
+                Logging = LoggingOptions.Read(settings),
+                Telemetry = TelemetryOptions.Read(settings)
             };
             settings.ThrowIfInvalid("node", logger);
             return options;
