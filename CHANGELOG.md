@@ -5,6 +5,18 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-01
+
+Core package split ([I27](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i27-core-package-split-m)), with RIoT2.Core 1.13.0. No port, user, volume, variable or JSON
+changes.
+
+- Changed: the node runs on the split Core packages (`RIoT2.Core.Contracts`, `.Mqtt`, `.Http`,
+  `.Devices`, `.Node`) through the `RIoT2.Core` facade, and shares all of them with its plugins
+  (`PluginHostContract`'s `RIoT2.Core` prefix). Plugins built against an older RIoT2.Core load as
+  before: their types resolve through the facade.
+- Tests: the legacy plugin fixture stays on RIoT2.Core 1.12.0, from before the split, so
+  `PluginCompatibilityTests` loads a real pre-split binary; the sharing test covers every package.
+
 ## [1.8.0] - 2026-11-01
 
 System.Text.Json on the wire ([I25](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i25-systemtextjson-on-the-wire-m)), with RIoT2.Core 1.11.0. No port, user, volume or

@@ -18,8 +18,22 @@ public class PluginCompatibilityTests
     public void PluginLocalDependenciesCannotForkHostContracts()
     {
         var context = new PluginLoadContext(typeof(PluginCompatibilityTests).Assembly.Location);
-        foreach (var assembly in new[] { typeof(IDevice).Assembly, typeof(IServiceCollection).Assembly, typeof(ILogger).Assembly })
-            Assert.AreSame(assembly, context.LoadFromAssemblyName(assembly.GetName()));
+        var shared = new[]
+        {
+            typeof(IDevice).Assembly, // RIoT2.Core.Devices
+            typeof(Report).Assembly, // RIoT2.Core.Contracts
+            typeof(RIoT2.Core.Utils.MqttClient).Assembly,
+            typeof(RIoT2.Core.Utils.Web).Assembly,
+            typeof(RIoT2.Core.Services.NodeMqttService).Assembly,
+            Assembly.Load("RIoT2.Core"), // the facade
+            typeof(IServiceCollection).Assembly,
+            typeof(ILogger).Assembly,
+        };
+        CollectionAssert.AreEquivalent(
+            new[] { "RIoT2.Core", "RIoT2.Core.Contracts", "RIoT2.Core.Devices", "RIoT2.Core.Http", "RIoT2.Core.Mqtt", "RIoT2.Core.Node" },
+            shared.Take(6).Select(a => a.GetName().Name).ToArray());
+        foreach (var assembly in shared)
+            Assert.AreSame(assembly, context.LoadFromAssemblyName(assembly.GetName()), assembly.GetName().Name);
     }
 
     [TestMethod]
@@ -46,6 +60,11 @@ public class PluginCompatibilityTests
         var context = new PluginLoadContext(pluginPath);
         var plugin = context.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginPath));
         var framework = plugin.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+        // Built against RIoT2.Core 1.12.0, before the split: DeviceBase, IDevice and DeviceConfiguration
+        // resolve through the node's RIoT2.Core facade to RIoT2.Core.Devices and .Contracts.
+        var core = plugin.GetReferencedAssemblies().Single(a => a.Name == "RIoT2.Core");
+        Assert.IsLessThan(new Version(1, 13), core.Version, "The fixture must reference a RIoT2.Core from before the package split.");
+        Assert.IsFalse(plugin.GetReferencedAssemblies().Any(a => a.Name!.StartsWith("RIoT2.Core.", StringComparison.Ordinal)));
         Assert.AreEqual(".NETCoreApp,Version=v9.0", framework, "The fixture must stay one target framework behind the node.");
         Assert.AreNotEqual(typeof(PluginCompatibilityTests).Assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName, framework);
 
