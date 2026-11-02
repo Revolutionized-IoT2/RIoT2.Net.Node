@@ -1,5 +1,5 @@
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine@sha256:254fe017495996d3abcc487ffacdcce2b73affb380d3af87af12c8dff41fe0b0 AS base
 WORKDIR /app
 RUN apk add --upgrade --no-cache tzdata
 ENV DOTNET_RUNNING_IN_CONTAINER=true
@@ -7,7 +7,7 @@ ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
 
 # This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine@sha256:cc02b814237a76c4735fb6eeee87181597b5e56f2ce458a435e527674d91f4d7 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG NUGET_URL=https://nuget.pkg.github.com/Revolutionized-IoT2/index.json
 WORKDIR /src

@@ -55,7 +55,8 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 - The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.17.0 (GitHub Packages) and ships the `RIoT2.Core` facade with `ExcludeAssets="compile"`, for plugins built before Core 1.13.0; it shares every `RIoT2.Core*` assembly with plugins. Don't compile against the facade. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
-  `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`.
+  `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`. Each `FROM` is pinned by digest
+  (`<image>:<tag>@sha256:...`); Renovate updates the digests.
 
 ## Layout
 
