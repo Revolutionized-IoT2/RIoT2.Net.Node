@@ -5,6 +5,10 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+- Added (tests only, no image change): `PluginCompatibilityTests` packs the Devices plugin with
+  Core's `RIoT2.Core.Devices.Build` while the tests build (into `PackedPlugin/`), checks the zip's
+  `.sha256` sidecar and manifest, extracts it and loads it the way `loadPlugins` does ([I29](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i29-plugin-packaging-s)).
+
 ## [1.10.0] - 2026-11-01
 
 Narrow Core references ([I28](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i28-narrow-references-and-generated-models-m), plan M1 step 4), with RIoT2.Core 1.14.0. No port, user, volume,

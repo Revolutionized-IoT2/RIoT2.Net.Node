@@ -27,4 +27,13 @@
     </ItemGroup>
     <Copy SourceFiles="@(_LegacyPluginFiles)" DestinationFolder="$(OutDir)LegacyPlugin" SkipUnchangedFiles="true" />
   </Target>
+
+  <!-- Packs the Devices plugin the way its release does (RIoT2.Core.Devices.Build, plan M12 step 3):
+       PluginCompatibilityTests installs the zip from PackedPlugin\ and loads it. NoBuild: the project
+       reference above has just built it. -->
+  <Target Name="PackDevicesPlugin" AfterTargets="Build">
+    <RemoveDir Directories="$(TargetDir)PackedPlugin" />
+    <MSBuild Projects="..\..\RIoT2.Net.Devices\RIoT2.Net.Devices.csproj" Targets="Publish"
+             Properties="Configuration=$(Configuration);NoBuild=true;PublishDir=$(ProjectDir)$(IntermediateOutputPath)packed-plugin\;RIoT2PluginOutputDir=$(TargetDir)PackedPlugin\" />
+  </Target>
 </Project>

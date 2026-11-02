@@ -85,6 +85,67 @@ public class PluginCompatibilityTests
         Assert.AreEqual(RIoT2.Core.DeviceState.Stopped, device.State);
     }
 
+    // The zip RIoT2.Core.Devices.Build packs on publish (plan M12 step 3), installed and loaded the way
+    // the node does it: extract into a plugin folder, then every DLL in its own PluginLoadContext.
+    [TestMethod]
+    public void PackedDevicesPluginInstallsAndLoadsIntoNode()
+    {
+        var packed = Path.Combine(AppContext.BaseDirectory, "PackedPlugin");
+        var zip = Directory.GetFiles(packed, "RIoT2.Net.Devices_*.zip").Single();
+        var sidecar = File.ReadAllText(zip + ".sha256").Trim();
+        using (var stream = File.OpenRead(zip))
+        {
+            var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(stream));
+            Assert.AreEqual($"{hash}  {Path.GetFileName(zip)}", sidecar, "The sidecar must be in sha256sum format.");
+        }
+
+        var folder = Path.Combine(Path.GetTempPath(), "riot2-packed-plugin-" + Guid.NewGuid().ToString("N"));
+        System.IO.Compression.ZipFile.ExtractToDirectory(zip, folder);
+        try
+        {
+            var manifest = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "PluginManifest.json"))).RootElement;
+            Assert.AreEqual("Devices plugin", manifest.GetProperty("name").GetString());
+            Assert.AreEqual(Path.GetFileName(zip), manifest.GetProperty("installedPackageFilename").GetString());
+            Assert.AreEqual(typeof(IDevice).Assembly.GetName().Version!.Major, Version.Parse(manifest.GetProperty("coreVersion").GetString()!).Major);
+            Assert.IsFalse(Directory.GetFiles(folder, "RIoT2.Core*.dll").Any(), "The node supplies RIoT2.Core*; a plugin must not ship it.");
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "RIoT2.Net.Devices.dll")));
+
+            // Same steps as Program.loadPlugins.
+            var plugins = new List<(PluginLoadContext Context, Type Type)>();
+            foreach (var file in Directory.GetFiles(folder, "*.dll"))
+            {
+                var context = new PluginLoadContext(file);
+                var assembly = context.LoadFromAssemblyName(AssemblyName.GetAssemblyName(file));
+                var type = assembly.GetTypes().SingleOrDefault(t => !t.IsAbstract && t.GetInterface(nameof(IDevicePlugin)) != null);
+                if (type != null)
+                    plugins.Add((context, type));
+            }
+            var (pluginContext, pluginType) = plugins.Single();
+            Assert.AreEqual("RIoT2.Net.Devices.Plugin", pluginType.FullName);
+            Assert.AreNotSame(typeof(RIoT2.Net.Devices.Plugin), pluginType, "The packed plugin must load from the zip, not from the test's reference.");
+
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton<ILogger>(NullLogger.Instance);
+            ((IDevicePlugin)Activator.CreateInstance(pluginType)!).Initialize(services);
+            var devices = services.Where(s => s.ServiceType == typeof(IDevice)).Select(s => s.ImplementationType!).ToList();
+            Assert.IsGreaterThanOrEqualTo(15, devices.Count);
+            Assert.IsTrue(devices.All(t => AssemblyLoadContext.GetLoadContext(t.Assembly) == pluginContext));
+
+            using var provider = services.BuildServiceProvider();
+            var device = (IDevice)ActivatorUtilities.CreateInstance(provider, devices.Single(t => t.Name == "Virtual"));
+            device.Initialize(new DeviceConfiguration { Id = "packed", CommandTemplates = [], ReportTemplates = [] });
+            device.Start();
+            device.Stop();
+            Assert.AreEqual(RIoT2.Core.DeviceState.Stopped, device.State);
+        }
+        finally
+        {
+            try { Directory.Delete(folder, recursive: true); }
+            catch (Exception x) when (x is IOException or UnauthorizedAccessException) { } // Windows: the load contexts keep the DLLs open
+        }
+    }
+
     public sealed class LegacyFixture : DeviceBase, IDevice
     {
         public LegacyFixture() : base(NullLogger.Instance) { }

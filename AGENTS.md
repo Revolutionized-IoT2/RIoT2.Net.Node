@@ -66,7 +66,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 | `Services/ConfigurationService.cs` | Node configuration from `IOptions<NodeOptions>`, and Debug-only local device configuration |
 | `Services/MqttBackgroundService.cs` | Hosted MQTT start/stop wrapper; Debug-only local configuration load |
 | `Services/NodeOptions.cs` | Every `RIOT2_*` setting the node reads, validated at startup with Core's `SettingsReader` |
-| `Tests/` | MSTest hardware-free integration and unit tests; references `RIoT2.Net.Devices` |
+| `Tests/` | MSTest hardware-free integration and unit tests; references `RIoT2.Net.Devices`, and packs it into `PackedPlugin/` after the build for `PluginCompatibilityTests` |
 | `Dockerfile`, `Dockerfile_Arm64` | Production container images; both listen on port 80 |
 | `.github/workflows/ci.yml`, `release.yml` | CI on every push; image release on a tag |
 
