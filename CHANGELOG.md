@@ -5,6 +5,16 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-11-02
+
+With RIoT2.Core 1.16.1. No port, user, volume, variable or JSON changes.
+
+- Fixed: a device whose start or refresh times out (an HTTP timeout) is in the error state with the
+  reason, instead of stopped without one (Core's `AsyncDeviceBase`, [I31](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i31-async-cleanup-part-2-and-threading-analyzers-m)).
+- Build: the threading analyzers ([I31](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i31-async-cleanup-part-2-and-threading-analyzers-m)) run in every project from the shared
+  `Directory.Build.props` and `.editorconfig`: a blocking wait, `async void` or an unobserved task
+  fails the CI build. No change to the shipped binaries.
+
 ## [1.11.0] - 2026-11-02
 
 Typed device options ([I30](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i30-typed-device-options-m)), with RIoT2.Core 1.16.0. No port, user, volume, variable or JSON
