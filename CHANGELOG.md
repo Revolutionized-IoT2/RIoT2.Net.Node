@@ -5,7 +5,17 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
-- Added (tests only, no image change): `PluginCompatibilityTests` packs the Devices plugin with
+## [1.11.0] - 2026-11-02
+
+Typed device options ([I30](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i30-typed-device-options-m)), with RIoT2.Core 1.16.0. No port, user, volume, variable or JSON
+changes. Install it before plugins built on Core 1.16.0 (Devices 1.4.0); older plugins keep working.
+
+- Added: `GET /api/device/configuration/templates` lists `parameterDefinitions` and every
+  parameter key of devices with typed options.
+- Fixed: devices find their parameters whatever the case of the key (divergence C1): the
+  configuration download camel-cases keys, and the node's `DeviceBase` now matches them
+  case-insensitively, for every installed plugin.
+- Added (tests only): `PluginCompatibilityTests` packs the Devices plugin with
   Core's `RIoT2.Core.Devices.Build` while the tests build (into `PackedPlugin/`), checks the zip's
   `.sha256` sidecar and manifest, extracts it and loads it the way `loadPlugins` does ([I29](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i29-plugin-packaging-s)).
 

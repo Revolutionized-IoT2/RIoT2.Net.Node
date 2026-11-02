@@ -178,7 +178,7 @@ This repository currently serves:
 | `GET` | `/api/node/manifest` | Node manifest from `Data/Manifest.json` |
 | `GET` | `/api/node/plugin/manifest` | Loaded plugin package manifest |
 | `GET` | `/api/device/status` | States for devices whose state is known |
-| `GET` | `/api/device/configuration/templates` | Configuration templates and Matter endpoint declarations from loaded devices |
+| `GET` | `/api/device/configuration/templates` | Configuration templates, parameter definitions (Node 1.11.0) and Matter endpoint declarations from loaded devices |
 | `GET` | `/health` | ASP.NET Core health check |
 
 Loaded plugin controllers can add their own routes, such as the default devices plugin's
