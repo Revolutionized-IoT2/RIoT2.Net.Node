@@ -39,7 +39,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     private readonly Channel<CommandResult> _results = Channel.CreateUnbounded<CommandResult>();
     private readonly Channel<NodeStatusMessage> _statuses = Channel.CreateUnbounded<NodeStatusMessage>();
     private readonly DeviceConfigurationApplier _applier;
-    private Task _stop;
+    private Task? _stop;
     private int _revision;
     private int _fetches;
     private readonly int _port;
@@ -59,7 +59,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     public ConcurrentQueue<DeviceReconfigurationResult> Reconfigurations { get; } = new();
     public const string NodeId = "integration-node";
 
-    private NodeIntegrationHarness(Func<NodeDeviceConfiguration, CancellationToken, Task> beforeApply, ICommandService commandService, string dataFolder)
+    private NodeIntegrationHarness(Func<NodeDeviceConfiguration?, CancellationToken, Task>? beforeApply, ICommandService? commandService, string? dataFolder)
     {
         DataFolder = dataFolder ?? Path.Combine(Path.GetTempPath(), "riot2-node-" + Guid.NewGuid().ToString("N"));
         _configuration = new TestConfiguration(DataFolder);
@@ -94,7 +94,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
         Devices = new DeviceService(_configuration, Log);
         Devices.Devices.Add(Device);
         _configuration.DeviceConfigurationUpdated += () =>
-            _loaded.Writer.TryWrite(_configuration.DeviceConfiguration.Name);
+            _loaded.Writer.TryWrite(_configuration.DeviceConfiguration!.Name);
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton<ILogger>(Log);
@@ -118,8 +118,8 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
                 if (beforeApply != null)
                     await beforeApply(desired, token);
                 var result = await _applier.ApplyAsync(desired, token);
-                Reconfigurations.Enqueue(result);
-                Applied.Enqueue(desired.Name);
+                Reconfigurations.Enqueue(result!);
+                Applied.Enqueue(desired!.Name);
                 _applied.Writer.TryWrite(desired.Name);
             }, token => Devices.StopAllDevicesAsync(token), Log));
         builder.Services.AddHostedService(services => services.GetRequiredService<DeviceConfigurationCoordinator>());
@@ -129,18 +129,18 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
         {
             var payload = args.ApplicationMessage.ConvertPayloadToString();
             if (args.ApplicationMessage.Topic == Constants.Get(NodeId, MqttTopic.Report))
-                _reports.Writer.TryWrite(Json.Deserialize<Report>(payload));
+                _reports.Writer.TryWrite(Json.Deserialize<Report>(payload)!);
             else if (args.ApplicationMessage.Topic == Constants.Get(NodeId, MqttTopic.CommandResult))
-                _results.Writer.TryWrite(CommandResult.Create(payload));
+                _results.Writer.TryWrite(CommandResult.Create(payload)!);
             else if (args.ApplicationMessage.Topic == Constants.Get(NodeId, MqttTopic.NodeStatus))
             {
                 RetainedStatus = args.ApplicationMessage.Retain;
-                _statuses.Writer.TryWrite(NodeStatusMessage.Create(payload));
+                _statuses.Writer.TryWrite(NodeStatusMessage.Create(payload)!);
             }
             else if (args.ApplicationMessage.Topic == Constants.Get(NodeId, MqttTopic.NodeOnline))
             {
                 RetainedPresence = args.ApplicationMessage.Retain;
-                _presence.Writer.TryWrite(Json.Deserialize<NodeOnlineMessage>(payload));
+                _presence.Writer.TryWrite(Json.Deserialize<NodeOnlineMessage>(payload)!);
             }
             return Task.CompletedTask;
         };
@@ -156,8 +156,8 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
 
     /// <param name="dataFolder">A previous harness's <see cref="DataFolder"/>: the node starts with the configuration it saved, as Program does.</param>
     public static async Task<NodeIntegrationHarness> StartAsync(
-        Func<NodeDeviceConfiguration, CancellationToken, Task> beforeApply = null, ICommandService commandService = null,
-        string dataFolder = null)
+        Func<NodeDeviceConfiguration?, CancellationToken, Task>? beforeApply = null, ICommandService? commandService = null,
+        string? dataFolder = null)
     {
         var harness = new NodeIntegrationHarness(beforeApply, commandService, dataFolder);
         try
@@ -199,7 +199,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
         [
             new DeviceConfiguration
             {
-                Id = "plc", Name = name, ClassFullName = typeof(EasyPLC).FullName,
+                Id = "plc", Name = name, ClassFullName = typeof(EasyPLC).FullName!,
                 DeviceParameters = new() { ["ipAddress"] = "127.0.0.1", ["port"] = plc.Port.ToString() },
                 CommandTemplates =
                 [
@@ -278,7 +278,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     }
 
     /// <summary>What a client that subscribes now receives on <paramref name="topic"/>: the retained payload, or <c>null</c>.</summary>
-    public async Task<string> ReadRetainedAsync(MqttTopic topic)
+    public async Task<string?> ReadRetainedAsync(MqttTopic topic)
     {
         using var late = new MqttFactory().CreateMqttClient();
         var received = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -326,7 +326,7 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
         Assert.IsTrue((await ReadAsync(_presence.Reader)).IsOnline);
     }
 
-    private async Task PublishAsync(MqttTopic topic, string payload)
+    private async Task PublishAsync(MqttTopic topic, string? payload)
     {
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await _peer.PublishAsync(new MqttApplicationMessageBuilder()
@@ -381,13 +381,13 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
 
     internal sealed class TestLog : ILogger<NodeMqttService>
     {
-        public record Entry(LogLevel Level, string Message, Exception Error);
+        public record Entry(LogLevel Level, string Message, Exception? Error);
         private readonly Channel<Entry> _errors = Channel.CreateUnbounded<Entry>();
         public ChannelReader<Entry> Errors => _errors.Reader;
         public ConcurrentQueue<Entry> Entries { get; } = new();
-        public IDisposable BeginScope<TState>(TState state) where TState : notnull => null;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel level) => true;
-        public void Log<TState>(LogLevel level, EventId id, TState state, Exception error, Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel level, EventId id, TState state, Exception? error, Func<TState, Exception?, string> formatter)
         {
             var entry = new Entry(level, formatter(state, error), error);
             Entries.Enqueue(entry);

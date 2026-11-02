@@ -14,7 +14,7 @@ internal sealed class SimulatedEasyPlc : IAsyncDisposable
     private readonly List<Connection> _connections = [];
     private readonly object _disposeGate = new();
     private readonly Task _acceptTask;
-    private Task _disposeTask;
+    private Task? _disposeTask;
     private int _connectionCount;
     private int _activeConnections;
 

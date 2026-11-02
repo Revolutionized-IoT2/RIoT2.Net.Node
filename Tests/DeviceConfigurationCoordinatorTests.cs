@@ -45,7 +45,7 @@ public class DeviceConfigurationCoordinatorTests
         await using var coordinator = Create(configuration, (desired, _) =>
         {
             Interlocked.Increment(ref count);
-            applied.TrySetResult(desired);
+            applied.TrySetResult(desired!);
             return Task.CompletedTask;
         });
         configuration.SetDeviceConfiguration(new NodeDeviceConfiguration());
@@ -85,7 +85,7 @@ public class DeviceConfigurationCoordinatorTests
             maximum = Math.Max(maximum, Interlocked.Increment(ref active));
             try
             {
-                if (desired.Id == "first")
+                if (desired!.Id == "first")
                 {
                     using var registration = token.Register(() => cancelled.TrySetResult());
                     entered.TrySetResult();
@@ -149,7 +149,7 @@ public class DeviceConfigurationCoordinatorTests
         var succeeded = Signal();
         await using var coordinator = new DeviceConfigurationCoordinator(configuration, (desired, _) =>
         {
-            if (desired.Id == "bad") throw new IOException("Synthetic failure");
+            if (desired!.Id == "bad") throw new IOException("Synthetic failure");
             succeeded.TrySetResult();
             return Task.CompletedTask;
         }, _ => Task.CompletedTask, logger);
@@ -194,7 +194,7 @@ public class DeviceConfigurationCoordinatorTests
 
     private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     private static DeviceConfigurationCoordinator Create(TestConfiguration configuration,
-        Func<NodeDeviceConfiguration, CancellationToken, Task> apply) =>
+        Func<NodeDeviceConfiguration?, CancellationToken, Task> apply) =>
         new(configuration, apply, _ => Task.CompletedTask, NullLogger.Instance);
     private sealed class TestConfiguration : NodeConfigurationServiceBase
     {
@@ -208,9 +208,9 @@ public class DeviceConfigurationCoordinatorTests
     private sealed class ErrorLogger : ILogger
     {
         public TaskCompletionSource Failed { get; } = Signal();
-        public IDisposable BeginScope<TState>(TState state) where TState : notnull => null;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel level, EventId id, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public void Log<TState>(LogLevel level, EventId id, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             if (level == LogLevel.Error) Failed.TrySetResult();
         }

@@ -5,6 +5,19 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-02
+
+Nullable reference types ([I32](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i32-nullable-reference-types-m)), with RIoT2.Core 1.17.0. No port, user, volume, variable or
+JSON changes. Install it before plugins built on Core 1.17.0 (Devices 1.6.0, RasPi.Devices 1.5.0);
+older plugins keep working.
+
+- Build: nullable is enabled in the node and its tests (shared `Directory.Build.props`); CI fails on
+  a nullable warning.
+- Plugin controllers are built with nullable too. MVC keeps treating their non-nullable request
+  members as optional (`SuppressImplicitRequiredAttributeForNonNullableReferenceTypes`), so a
+  request it accepted before is still accepted.
+- The startup code resolves its services with `GetRequiredService`.
+
 ## [1.11.1] - 2026-11-02
 
 With RIoT2.Core 1.16.1. No port, user, volume, variable or JSON changes.

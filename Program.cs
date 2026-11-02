@@ -67,15 +67,20 @@ builder.Services.AddHostedService(services => services.GetRequiredService<Device
 builder.Services.AddHttpClient("plugin-metadata", client => client.Timeout = TimeSpan.FromSeconds(30));
 builder.Services.AddHealthChecks().AddCheck<MqttHealthCheck>("mqtt");
 
+// Plugin controllers are built with nullable reference types; the annotations must not make MVC
+// require request members that were optional (plan M8 step 9).
+builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
+
 _configurationService.InstallPluginPackage();
 loadPlugins();
 
 var app = builder.Build();
-nodeLogger.LogInformation($"Services initialized. {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Name??"n/a"} - {app.Services.GetService<INodeConfigurationService>().Configuration.Manifest?.Version??"n/a"}");
+nodeLogger.LogInformation($"Services initialized. {app.Services.GetRequiredService<INodeConfigurationService>().Configuration.Manifest?.Name??"n/a"} - {app.Services.GetRequiredService<INodeConfigurationService>().Configuration.Manifest?.Version??"n/a"}");
 
 if (pluginsLoaded)
 {
-    var package = app.Services.GetService<INodeConfigurationService>().Configuration.PluginManifest;
+    var package = app.Services.GetRequiredService<INodeConfigurationService>().Configuration.PluginManifest;
     nodeLogger.LogInformation($"Plugins loaded successfully: {package?.InstalledPackageFilename}. Version: {package?.Version}");
 
     var deviceService = app.Services.GetRequiredService<IDeviceService>();
@@ -104,14 +109,14 @@ catch (Exception x)
     nodeLogger.LogError(x, "Could not read the saved configuration; waiting for the orchestrator.");
 }
 
-var url = app.Services.GetService<INodeConfigurationService>().Configuration.Url;
-app.Services.GetService<INodeConfigurationService>().OnlineMessage = new NodeOnlineMessage()
+var url = app.Services.GetRequiredService<INodeConfigurationService>().Configuration.Url;
+app.Services.GetRequiredService<INodeConfigurationService>().OnlineMessage = new NodeOnlineMessage()
 {
     NodeBaseUrl = url,
     NodeType = NodeType.Device,
     IsOnline = true,
-    Manifest = app.Services.GetService<INodeConfigurationService>().Configuration?.Manifest,
-    PluginManifest = app.Services.GetService<INodeConfigurationService>().Configuration?.PluginManifest
+    Manifest = app.Services.GetRequiredService<INodeConfigurationService>().Configuration?.Manifest,
+    PluginManifest = app.Services.GetRequiredService<INodeConfigurationService>().Configuration?.PluginManifest
 };
 
 void loadPlugins()
@@ -119,7 +124,7 @@ void loadPlugins()
     nodeLogger.LogInformation("Trying to load plugins...");
     try
     {
-        var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "Plugins"));
+        var pluginDirectory = new DirectoryInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly()!.Location)!, "Plugins"));
         var pluginFiles = pluginDirectory?.GetFiles("*.dll");
 
         if (pluginFiles != null && pluginFiles.Count() > 0)
@@ -145,7 +150,7 @@ void loadPlugins()
                         //load plugin itself
                         var initMethod = pluginClass.GetMethod(nameof(IDevicePlugin.Initialize), BindingFlags.Public | BindingFlags.Instance);
                         var obj = Activator.CreateInstance(pluginClass) as IDevicePlugin;
-                        initMethod.Invoke(obj, [builder.Services]);
+                        initMethod!.Invoke(obj, [builder.Services]);
                         pluginsLoaded = true;
                     }
                     catch (Exception x)
@@ -165,7 +170,7 @@ void loadPlugins()
 
 // Called before every configuration is applied. Returns true when a new plugin package was downloaded
 // and the node is restarting to install it.
-async Task<bool> UpdatePluginPackageAsync(IServiceProvider services, NodeDeviceConfiguration desired, CancellationToken cancellationToken)
+async Task<bool> UpdatePluginPackageAsync(IServiceProvider services, NodeDeviceConfiguration? desired, CancellationToken cancellationToken)
 {
     nodeLogger.LogInformation("Device configuration updated.");
     var configurationService = services.GetRequiredService<INodeConfigurationService>();

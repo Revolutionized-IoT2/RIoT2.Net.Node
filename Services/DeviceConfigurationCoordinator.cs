@@ -7,26 +7,26 @@ namespace RIoT2.Net.Node.Services
     internal sealed class DeviceConfigurationCoordinator : IHostedService, IAsyncDisposable
     {
         private readonly INodeConfigurationService _configuration;
-        private readonly Func<NodeDeviceConfiguration, CancellationToken, Task> _apply;
+        private readonly Func<NodeDeviceConfiguration?, CancellationToken, Task> _apply;
         private readonly Func<CancellationToken, Task> _stopDevices;
         private readonly ILogger _logger;
         private readonly object _gate = new();
         private readonly CancellationTokenSource _shutdown = new();
-        private readonly Channel<(long Version, NodeDeviceConfiguration Configuration)> _pending =
-            Channel.CreateBounded<(long, NodeDeviceConfiguration)>(new BoundedChannelOptions(1)
+        private readonly Channel<(long Version, NodeDeviceConfiguration? Configuration)> _pending =
+            Channel.CreateBounded<(long, NodeDeviceConfiguration?)>(new BoundedChannelOptions(1)
             {
                 SingleReader = true, FullMode = BoundedChannelFullMode.DropOldest
             });
-        private CancellationTokenSource _application;
+        private CancellationTokenSource? _application;
         private Task _worker = Task.CompletedTask;
-        private Task _stopTask;
+        private Task? _stopTask;
         private bool _started;
         private bool _stopping;
         private long _version;
         private int _disposed;
 
         public DeviceConfigurationCoordinator(INodeConfigurationService configuration,
-            Func<NodeDeviceConfiguration, CancellationToken, Task> apply,
+            Func<NodeDeviceConfiguration?, CancellationToken, Task> apply,
             Func<CancellationToken, Task> stopDevices, ILogger logger)
         {
             _configuration = configuration;

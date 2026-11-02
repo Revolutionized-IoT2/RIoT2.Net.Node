@@ -188,7 +188,7 @@ public class NodeIntegrationTests
         using var commands = new BlockingLegacyCommands();
         await using var node = await NodeIntegrationHarness.StartAsync(commandService: commands);
         await node.CommandAsync("first");
-        Task stopping = null;
+        Task? stopping = null;
         try
         {
             await commands.Entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
@@ -216,7 +216,7 @@ public class NodeIntegrationTests
         await using var plc = new SimulatedEasyPlc();
         await using var node = await NodeIntegrationHarness.StartAsync(async (desired, token) =>
         {
-            if (desired.Name != "blocked") return;
+            if (desired!.Name != "blocked") return;
             using var registration = token.Register(() => cancelled.TrySetResult());
             entered.TrySetResult();
             await release.Task;

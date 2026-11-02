@@ -11,10 +11,10 @@ namespace RIoT2.Net.Node.Services
         public const string UrlVariable = "RIOT2_NODE_URL";
 
         /// <summary>Unique id; also the MQTT client id. Must match the node id configured in the UI.</summary>
-        public string Id { get; set; }
+        public string Id { get; set; } = null!;
 
         /// <summary>The URL the orchestrator uses to call this node; advertised as <c>nodeBaseUrl</c>.</summary>
-        public string Url { get; set; }
+        public string Url { get; set; } = null!;
 
         public MqttOptions Mqtt { get; set; } = new();
 
@@ -28,7 +28,7 @@ namespace RIoT2.Net.Node.Services
         /// Reads and validates the settings, and throws <see cref="ConfigurationValidationException"/>
         /// listing every problem (logged as critical) when any is missing or invalid.
         /// </summary>
-        public static NodeOptions Load(IConfiguration configuration, ILogger logger = null)
+        public static NodeOptions Load(IConfiguration configuration, ILogger? logger = null)
         {
             var settings = new SettingsReader(configuration);
             var options = new NodeOptions

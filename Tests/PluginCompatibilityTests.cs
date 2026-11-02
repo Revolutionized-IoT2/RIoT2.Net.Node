@@ -41,9 +41,9 @@ public class PluginCompatibilityTests
     {
         var context = new PluginLoadContext(typeof(PluginCompatibilityTests).Assembly.Location);
         var plugin = context.LoadFromAssemblyPath(typeof(PluginCompatibilityTests).Assembly.Location);
-        var type = plugin.GetType(typeof(LegacyFixture).FullName, throwOnError: true);
+        var type = plugin.GetType(typeof(LegacyFixture).FullName!, throwOnError: true)!;
         Assert.IsTrue(typeof(IDevice).IsAssignableFrom(type));
-        var device = (IDevice)Activator.CreateInstance(type);
+        var device = (IDevice)Activator.CreateInstance(type)!;
         device.Initialize(new DeviceConfiguration { Id = "legacy", CommandTemplates = [], ReportTemplates = [] });
         device.Start();
         device.Stop();
@@ -63,7 +63,7 @@ public class PluginCompatibilityTests
         // Built against RIoT2.Core 1.12.0, before the split: DeviceBase, IDevice and DeviceConfiguration
         // resolve through the node's RIoT2.Core facade to RIoT2.Core.Devices and .Contracts.
         var core = plugin.GetReferencedAssemblies().Single(a => a.Name == "RIoT2.Core");
-        Assert.IsLessThan(new Version(1, 13), core.Version, "The fixture must reference a RIoT2.Core from before the package split.");
+        Assert.IsLessThan(new Version(1, 13), core.Version!, "The fixture must reference a RIoT2.Core from before the package split.");
         Assert.IsFalse(plugin.GetReferencedAssemblies().Any(a => a.Name!.StartsWith("RIoT2.Core.", StringComparison.Ordinal)));
         Assert.AreEqual(".NETCoreApp,Version=v9.0", framework, "The fixture must stay one target framework behind the node.");
         Assert.AreNotEqual(typeof(PluginCompatibilityTests).Assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName, framework);

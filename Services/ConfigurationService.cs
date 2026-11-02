@@ -10,7 +10,7 @@ namespace RIoT2.Net.Node.Services
     {
         private readonly NodeOptions _options;
         private readonly string _dataFolder;
-        private NodeConfiguration _configuration;
+        private NodeConfiguration? _configuration;
         private ILogger _logger;
 
         /// <param name="dataFolder">The node's <c>Data</c> folder (in the image <c>/app/Data</c>, a volume); the last applied configuration is saved there.</param>
@@ -58,7 +58,7 @@ namespace RIoT2.Net.Node.Services
 
                 var result = await System.IO.File.ReadAllBytesAsync(localConfigFile.FullName);
 
-                SetDeviceConfiguration(Json.Deserialize<NodeDeviceConfiguration>(System.Text.Encoding.UTF8.GetString(result)));
+                SetDeviceConfiguration(Json.Deserialize<NodeDeviceConfiguration>(System.Text.Encoding.UTF8.GetString(result))!);
             }
             catch (Exception e)
             {
@@ -68,7 +68,7 @@ namespace RIoT2.Net.Node.Services
         }
 #endif
 
-        private FileInfo loadConfigurationFile(string filename)
+        private FileInfo? loadConfigurationFile(string filename)
         {
             var fullPath = Path.Combine(Configuration.ApplicationFolder, filename);
             FileInfo f = new FileInfo(fullPath);

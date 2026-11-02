@@ -48,7 +48,7 @@ public class NodeOptionsTests
             Mqtt = new MqttOptions { Host = "broker", Username = "user", Password = "secret" }
         };
 
-        var configuration = new ConfigurationService(Microsoft.Extensions.Options.Options.Create(options), null, Path.GetTempPath()).Configuration;
+        var configuration = new ConfigurationService(Microsoft.Extensions.Options.Options.Create(options), null!, Path.GetTempPath()).Configuration;
 
         Assert.AreEqual("node-1", configuration.Id);
         Assert.AreEqual("http://node", configuration.Url);
@@ -59,15 +59,15 @@ public class NodeOptionsTests
     }
 
     private static IConfiguration Settings(Dictionary<string, string> values) =>
-        new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+        new ConfigurationBuilder().AddInMemoryCollection(values.ToDictionary(p => p.Key, p => (string?)p.Value)).Build();
 
     private sealed class RecordingLogger : ILogger
     {
         public List<(LogLevel Level, string Message)> Messages { get; } = [];
-        public IDisposable BeginScope<TState>(TState state) => null;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-            Exception exception, Func<TState, Exception, string> formatter) =>
+            Exception? exception, Func<TState, Exception?, string> formatter) =>
             Messages.Add((logLevel, formatter(state, exception)));
     }
 }

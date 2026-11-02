@@ -13,16 +13,16 @@ namespace RIoT2.Net.Node
             _resolver = new AssemblyDependencyResolver(pluginPath);
         }
 
-        protected override Assembly Load(AssemblyName assemblyName)
+        protected override Assembly? Load(AssemblyName assemblyName)
         {
             // Shared contracts always come from the node, whatever version the plugin was built against.
-            if (PluginHostContract.IsShared(assemblyName.Name))
+            if (assemblyName.Name != null && PluginHostContract.IsShared(assemblyName.Name))
             {
                 return Default.Assemblies.FirstOrDefault(assembly => assembly.GetName().Name == assemblyName.Name)
                     ?? Default.LoadFromAssemblyName(new AssemblyName(assemblyName.Name));
             }
 
-            string assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
+            string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
             if (assemblyPath != null)
             {
                 return LoadFromAssemblyPath(assemblyPath);
@@ -33,7 +33,7 @@ namespace RIoT2.Net.Node
 
         protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
         {
-            string libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
+            string? libraryPath = _resolver.ResolveUnmanagedDllToPath(unmanagedDllName);
             if (libraryPath != null)
             {
                 return LoadUnmanagedDllFromPath(libraryPath);

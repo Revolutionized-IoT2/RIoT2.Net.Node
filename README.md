@@ -195,7 +195,7 @@ Loaded plugin controllers can add their own routes, such as the default devices 
   `net10.0` node.
 - Release the Node image and the plugin packages together, node first. Plugins run with the Node
   host's `RIoT2.Core*` assemblies: a plugin built against a newer Core than the node's doesn't
-  load (plugins on Core 1.14.0 need Node 1.10.0). Plugins built against a RIoT2.Core from before
+  load (plugins on Core 1.17.0 need Node 1.12.0). Plugins built against a RIoT2.Core from before
   the 1.13.0 package split resolve their types through the facade.
 
 ## Contributing

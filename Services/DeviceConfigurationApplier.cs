@@ -13,12 +13,12 @@ namespace RIoT2.Net.Node.Services
     {
         private readonly NodeConfigurationServiceBase _configuration;
         private readonly DeviceServiceBase _devices;
-        private readonly Func<NodeDeviceConfiguration, CancellationToken, Task<bool>> _updatePlugins;
+        private readonly Func<NodeDeviceConfiguration?, CancellationToken, Task<bool>>? _updatePlugins;
         private readonly ILogger _logger;
 
         /// <param name="updatePlugins">Returns <c>true</c> when a new plugin package was downloaded and the node restarts.</param>
         public DeviceConfigurationApplier(NodeConfigurationServiceBase configuration, DeviceServiceBase devices,
-            Func<NodeDeviceConfiguration, CancellationToken, Task<bool>> updatePlugins, ILogger logger)
+            Func<NodeDeviceConfiguration?, CancellationToken, Task<bool>>? updatePlugins, ILogger logger)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _devices = devices ?? throw new ArgumentNullException(nameof(devices));
@@ -27,7 +27,7 @@ namespace RIoT2.Net.Node.Services
         }
 
         /// <summary>Returns what happened to the devices, or <c>null</c> when the node restarts for a new plugin package.</summary>
-        public async Task<DeviceReconfigurationResult> ApplyAsync(NodeDeviceConfiguration desired, CancellationToken cancellationToken)
+        public async Task<DeviceReconfigurationResult?> ApplyAsync(NodeDeviceConfiguration? desired, CancellationToken cancellationToken)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace RIoT2.Net.Node.Services
             }
         }
 
-        private List<FailedDevice> FailedDevices(NodeDeviceConfiguration desired)
+        private List<FailedDevice> FailedDevices(NodeDeviceConfiguration? desired)
         {
             var failed = new List<FailedDevice>();
             foreach (var entry in desired?.DeviceConfigurations ?? [])

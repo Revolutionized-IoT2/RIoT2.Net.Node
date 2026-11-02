@@ -39,7 +39,8 @@ namespace RIoT2.Net.Node.Services
 
         public async Task SendNodeOnlineMessage() 
         {
-            await _mqttService.SendNodeOnlineMessage(_configuration.OnlineMessage);
+            // Program sets the online message before the host starts.
+            await _mqttService.SendNodeOnlineMessage(_configuration.OnlineMessage!);
         }
 
         private async Task initialize() 

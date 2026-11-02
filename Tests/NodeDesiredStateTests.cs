@@ -21,14 +21,14 @@ public class NodeDesiredStateTests
         var presence = await node.PresenceAsync();
         Assert.IsTrue(presence.HasCapability(Contract.Capabilities.DesiredState));
 
-        var retained = Json.Deserialize<NodeOnlineMessage>(await node.ReadRetainedAsync(MqttTopic.NodeOnline));
+        var retained = Json.Deserialize<NodeOnlineMessage>(await node.ReadRetainedAsync(MqttTopic.NodeOnline))!;
         Assert.IsTrue(retained.IsOnline, "A late subscriber sees the node's presence.");
-        var status = NodeStatusMessage.Create(await node.ReadRetainedAsync(MqttTopic.NodeStatus));
+        var status = NodeStatusMessage.Create(await node.ReadRetainedAsync(MqttTopic.NodeStatus))!;
         Assert.AreEqual(NodeConfigurationState.Applying, status.State, "Without a configuration the node waits for one.");
         Assert.IsNull(status.AppliedRevision);
 
         await node.StopAsync();
-        Assert.IsFalse(Json.Deserialize<NodeOnlineMessage>(await node.ReadRetainedAsync(MqttTopic.NodeOnline)).IsOnline);
+        Assert.IsFalse(Json.Deserialize<NodeOnlineMessage>(await node.ReadRetainedAsync(MqttTopic.NodeOnline))!.IsOnline);
     }
 
     [TestMethod]
@@ -108,7 +108,7 @@ public class NodeDesiredStateTests
         Assert.AreEqual("initial", node.Device.Name);
         Assert.AreEqual(RIoT2.Core.DeviceState.Running, node.Device.State);
         Assert.HasCount(1, node.Reconfigurations);
-        StringAssert.Contains((await ReadAsync(node.Log.Errors)).Error.Message, "HTTP 404");
+        StringAssert.Contains((await ReadAsync(node.Log.Errors)).Error!.Message, "HTTP 404");
 
         // The next good configuration applies normally.
         await node.SendDesiredAsync(node.ConfigurationFor(plc, "renamed"), 3);
@@ -126,8 +126,8 @@ public class NodeDesiredStateTests
         var desired = await node.SendDesiredAsync(configuration, 1);
         await node.WaitAppliedAsync("initial");
         var applied = await node.StatusAsync(s => s.State == NodeConfigurationState.Applied);
-        Assert.AreEqual("missing", applied.FailedDevices.Single().Id);
-        StringAssert.Contains(applied.FailedDevices.Single().Message, "Plugins.Missing");
+        Assert.AreEqual("missing", applied.FailedDevices!.Single().Id);
+        StringAssert.Contains(applied.FailedDevices!.Single().Message, "Plugins.Missing");
 
         // Not every device runs, so the same command is fetched again (304) and applied again.
         await node.ResendAsync(desired);
