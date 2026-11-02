@@ -16,6 +16,7 @@ using RIoT2.Core;
 using RIoT2.Core.Abstracts;
 using RIoT2.Core.Interfaces.Services;
 using RIoT2.Core.Models;
+using RIoT2.Core.Plugins;
 using RIoT2.Core.Services;
 using RIoT2.Core.Utils;
 using RIoT2.Net.Devices.Catalog;
@@ -59,7 +60,8 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     public ConcurrentQueue<DeviceReconfigurationResult> Reconfigurations { get; } = new();
     public const string NodeId = "integration-node";
 
-    private NodeIntegrationHarness(Func<NodeDeviceConfiguration?, CancellationToken, Task>? beforeApply, ICommandService? commandService, string? dataFolder)
+    private NodeIntegrationHarness(Func<NodeDeviceConfiguration?, CancellationToken, Task>? beforeApply, ICommandService? commandService, string? dataFolder,
+        Func<NodeDeviceConfiguration?, CancellationToken, Task<PluginUpdateResult>>? updatePlugins, Action? restart)
     {
         DataFolder = dataFolder ?? Path.Combine(Path.GetTempPath(), "riot2-node-" + Guid.NewGuid().ToString("N"));
         _configuration = new TestConfiguration(DataFolder);
@@ -111,14 +113,15 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
             () => new NodeMqttClient(NodeId, "127.0.0.1", "", "", port)));
         builder.Services.AddHostedService<MqttBackgroundService>();
         builder.Services.AddHostedService<DeviceSchedulerService>();
-        _applier = new DeviceConfigurationApplier(_configuration, Devices, null, Log);
+        _applier = new DeviceConfigurationApplier(_configuration, Devices, updatePlugins, Log, restart);
         builder.Services.AddSingleton<DeviceConfigurationCoordinator>(_ => new DeviceConfigurationCoordinator(
             _configuration, async (desired, token) =>
             {
                 if (beforeApply != null)
                     await beforeApply(desired, token);
                 var result = await _applier.ApplyAsync(desired, token);
-                Reconfigurations.Enqueue(result!);
+                if (result != null)
+                    Reconfigurations.Enqueue(result);
                 Applied.Enqueue(desired!.Name);
                 _applied.Writer.TryWrite(desired.Name);
             }, token => Devices.StopAllDevicesAsync(token), Log));
@@ -155,11 +158,14 @@ internal sealed class NodeIntegrationHarness : IAsyncDisposable
     public bool RetainedStatus { get; private set; }
 
     /// <param name="dataFolder">A previous harness's <see cref="DataFolder"/>: the node starts with the configuration it saved, as Program does.</param>
+    /// <param name="updatePlugins">The plugin package check before each configuration, as Program's; none by default.</param>
+    /// <param name="restart">Called when the applier restarts the node for a staged plugin package.</param>
     public static async Task<NodeIntegrationHarness> StartAsync(
         Func<NodeDeviceConfiguration?, CancellationToken, Task>? beforeApply = null, ICommandService? commandService = null,
-        string? dataFolder = null)
+        string? dataFolder = null, Func<NodeDeviceConfiguration?, CancellationToken, Task<PluginUpdateResult>>? updatePlugins = null,
+        Action? restart = null)
     {
-        var harness = new NodeIntegrationHarness(beforeApply, commandService, dataFolder);
+        var harness = new NodeIntegrationHarness(beforeApply, commandService, dataFolder, updatePlugins, restart);
         try
         {
             await harness._api.StartAsync();

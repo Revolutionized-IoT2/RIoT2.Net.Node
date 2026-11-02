@@ -1,5 +1,6 @@
 using RIoT2.Core.Abstracts;
 using RIoT2.Core.Models;
+using RIoT2.Core.Plugins;
 
 namespace RIoT2.Net.Node.Services
 {
@@ -7,23 +8,27 @@ namespace RIoT2.Net.Node.Services
     /// Applies a node configuration (design 7.2): checks the plugin package, restarts only the devices
     /// whose entry changed or that aren't running, saves the configuration for the next start, and
     /// reports the outcome on the node's status (<c>applied</c> with the devices that didn't start,
-    /// <c>pendingRestart</c> or <c>failed</c>).
+    /// <c>pendingRestart</c> or <c>failed</c>). A staged plugin package saves the configuration and restarts
+    /// the node; a refused one leaves the plugins as they are, applies the devices, and reports <c>failed</c>.
     /// </summary>
     internal sealed class DeviceConfigurationApplier
     {
         private readonly NodeConfigurationServiceBase _configuration;
         private readonly DeviceServiceBase _devices;
-        private readonly Func<NodeDeviceConfiguration?, CancellationToken, Task<bool>>? _updatePlugins;
+        private readonly Func<NodeDeviceConfiguration?, CancellationToken, Task<PluginUpdateResult>>? _updatePlugins;
         private readonly ILogger _logger;
+        private readonly Action? _restart;
 
-        /// <param name="updatePlugins">Returns <c>true</c> when a new plugin package was downloaded and the node restarts.</param>
+        /// <param name="updatePlugins">Checks the configuration's plugin package and stages a new one (<see cref="PluginPackageInstaller.UpdateAsync"/>).</param>
+        /// <param name="restart">Restarts the node to install a staged package.</param>
         public DeviceConfigurationApplier(NodeConfigurationServiceBase configuration, DeviceServiceBase devices,
-            Func<NodeDeviceConfiguration?, CancellationToken, Task<bool>>? updatePlugins, ILogger logger)
+            Func<NodeDeviceConfiguration?, CancellationToken, Task<PluginUpdateResult>>? updatePlugins, ILogger logger, Action? restart = null)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _devices = devices ?? throw new ArgumentNullException(nameof(devices));
             _updatePlugins = updatePlugins;
             _logger = logger;
+            _restart = restart;
         }
 
         /// <summary>Returns what happened to the devices, or <c>null</c> when the node restarts for a new plugin package.</summary>
@@ -31,9 +36,15 @@ namespace RIoT2.Net.Node.Services
         {
             try
             {
-                if (_updatePlugins != null && await _updatePlugins(desired, cancellationToken))
+                var plugins = _updatePlugins == null ? PluginUpdateResult.Unchanged : await _updatePlugins(desired, cancellationToken);
+                if (plugins.Outcome == PluginUpdateOutcome.Staged)
                 {
+                    // Saved first, so the node starts with the configuration that names the new package and
+                    // doesn't install the previous one again.
+                    if (desired != null)
+                        Save(desired);
                     _configuration.ConfigurationStatus.PendingRestart();
+                    _restart?.Invoke();
                     return null;
                 }
 
@@ -44,14 +55,14 @@ namespace RIoT2.Net.Node.Services
                     _logger.LogInformation("Device configuration applied: {Result}. Inspect device status for individual startup failures.", result);
 
                 if (desired != null)
-                {
-                    try { _configuration.SaveAppliedConfiguration(desired); }
-                    catch (Exception error)
-                    {
-                        _logger.LogWarning(error, "Could not save the applied configuration; the node starts without it when the orchestrator is down");
-                    }
-                }
+                    Save(desired);
                 var failed = FailedDevices(desired);
+                if (plugins.Outcome == PluginUpdateOutcome.Rejected)
+                {
+                    // The devices run with the installed plugins, but the configuration isn't fully applied.
+                    _configuration.ConfigurationStatus.Failed(plugins.Message ?? "The plugin package was refused.");
+                    return result;
+                }
                 _configuration.ConfigurationStatus.Applied(desired?.Revision, desired?.Hash, failed);
                 if (failed.Count > 0)
                     _logger.LogWarning("Configuration revision {Revision} applied, but {Count} device(s) are not running: {Devices}",
@@ -63,6 +74,15 @@ namespace RIoT2.Net.Node.Services
             {
                 _configuration.ConfigurationStatus.Failed(error.GetBaseException().Message);
                 throw;
+            }
+        }
+
+        private void Save(NodeDeviceConfiguration desired)
+        {
+            try { _configuration.SaveAppliedConfiguration(desired); }
+            catch (Exception error)
+            {
+                _logger.LogWarning(error, "Could not save the applied configuration; the node starts without it when the orchestrator is down");
             }
         }
 

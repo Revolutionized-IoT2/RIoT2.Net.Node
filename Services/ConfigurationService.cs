@@ -27,6 +27,8 @@ namespace RIoT2.Net.Node.Services
 
         protected override string AppliedConfigurationPath => Path.Combine(_dataFolder, "configuration.applied.json");
 
+        protected override ILogger? PluginLogger => _logger;
+
         public override NodeConfiguration Configuration 
         {
             get

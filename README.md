@@ -19,9 +19,9 @@ How the node fits into the platform: [architecture overview](https://github.com/
 |---|---|
 | `Program.cs` | Service registration, plugin loading, configuration application and HTTP endpoints |
 | `Services/` | Settings (`NodeOptions`), node configuration, MQTT hosted service and configuration coordination |
-| `PluginLoadContext.cs` | Runtime plugin loading; shares the assemblies in Core's `PluginHostContract` |
+| `PluginLoader.cs`, `PluginLoadContext.cs` | Runtime plugin loading; shares the assemblies in Core's `PluginHostContract` |
 | `Plugins/` | Plugin assemblies copied beside the executable for local/dev runs |
-| `Data/` | Runtime manifests, downloaded plugin zips, the saved configuration (`configuration.applied.json`) and development-only local configuration |
+| `Data/` | Runtime manifests, the saved configuration (`configuration.applied.json`), the plugin install journal and refused package, and development-only local configuration |
 | `Tests/` | Hardware-free MSTest integration and unit tests |
 | `Dockerfile`, `Dockerfile_Arm64` | amd64 and arm64 production images |
 
@@ -30,9 +30,12 @@ How the node fits into the platform: [architecture overview](https://github.com/
 At startup the node:
 
 1. Validates `RIOT2_NODE_ID`, `RIOT2_NODE_URL` and `RIOT2_MQTT_IP`.
-2. Installs the first plugin zip found in `Data/`, replacing the contents of `Plugins/`.
+2. Installs a staged plugin package: the contents of `Plugins/` move to `Plugins.previous/`, those
+   of `Plugins.new/` to `Plugins/`.
 3. Loads plugin assemblies from `Plugins/`, discovers `IDevicePlugin`, lets the plugin register its
-   services and devices, and adds the plugin's controllers.
+   services and devices, and adds the plugin's controllers. If a package installed at this start
+   doesn't load, the node puts the previous plugins back and exits with code 75, once; the
+   container restarts it with them. (A first install has nothing to go back to and stays.)
 4. Applies the configuration it saved last (`Data/configuration.applied.json` under the content
    root, `/app/Data` in the image), so its devices run even while the orchestrator is down.
 5. Starts MQTT and the scheduler, publishes its configuration status and its presence (both
@@ -53,6 +56,16 @@ Commands that carry a `correlationId` (from Orchestrator 1.4.0) are answered on
 `riot2/node/{id}/command/result` with `executed`, `failed`, `unknownCommand`, `rejected` or
 `duplicate` (executed before); a redelivered command runs only once. A command that arrives while its device or the
 configuration isn't ready yet is answered `rejected`, and the orchestrator sends it again.
+
+Before each configuration is applied, the node checks its `pluginPackageUrl`
+([design 7.2](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/desired-state-configuration.md) phase 4): it reads `<url>.sha256`
+and compares it with the installed manifest's `sha256` (the file name without a sidecar).
+A changed package is downloaded, its hash verified, extracted into `Plugins.new/` and checked
+for `coreVersion` (same Core major, minor no newer than the node's); the node saves the
+configuration, reports `pendingRestart` and restarts. A refused package (hash mismatch,
+incompatible, not loadable) leaves `Plugins/` alone: the devices run with the installed plugins
+and the status is `failed` with the reason. A package refused for good is not downloaded again;
+delete `Data/plugins.rejected.json` to retry it.
 
 If no plugin assembly loads, the node logs `NO PLUGINS LOADED` and continues to serve its node
 endpoints. Device functionality is unavailable until a plugin package is installed and the node
@@ -109,7 +122,7 @@ dotnet test .\RIoT2.Net.Node\Tests\RIoT2.Net.Node.Tests.csproj -c Release
 ```
 
 The tests use a loopback MQTT broker, an HTTP configuration endpoint and simulated device
-transports. They do not execute the Docker image, install a real plugin package from a release URL,
+transports, and install the Devices plugin zip from the build. They do not execute the Docker image, download from a release URL,
 talk to an external orchestrator, or contact physical hardware.
 
 The [end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests) in RIoT2.Tests run this `Program`, with the Devices plugin in
@@ -132,8 +145,8 @@ $env:RIOT2_MQTT_PASSWORD = "<mqtt-password>"
 dotnet run --project .\RIoT2.Net.Node\RIoT2.Net.Node.csproj -c Release
 ```
 
-Put plugin assemblies in the publish/runtime `Plugins/` folder, or place a plugin zip in `Data/`
-and restart so Core installs it into `Plugins/`.
+Put plugin assemblies in the publish/runtime `Plugins/` folder, or set `pluginPackageUrl` in the
+node's configuration and the node installs the package itself.
 
 ## Docker
 
@@ -199,7 +212,7 @@ security mode ([design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/
   `net10.0` node.
 - Release the Node image and the plugin packages together, node first. Plugins run with the Node
   host's `RIoT2.Core*` assemblies: a plugin built against a newer Core than the node's doesn't
-  load (plugins on Core 1.18.0 need Node 1.13.0). Plugins built against a RIoT2.Core from before
+  load, and since 1.14.0 the node refuses to install it (plugins on Core 1.19.0 need Node 1.14.0). Plugins built against a RIoT2.Core from before
   the 1.13.0 package split resolve their types through the facade.
 
 ## Contributing

@@ -5,6 +5,33 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-02
+
+Verified plugin updates ([I35](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-3-4.md#i35-verified-plugin-updates-m), [design 7.2](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/desired-state-configuration.md) phase 4, backlog item 5), with
+RIoT2.Core 1.19.0, which plugins built on Core 1.19.0 need. No port, user, volume or environment
+changes; `Plugins.new/` and `Plugins.previous/` appear next to `/app/Plugins` during an update.
+
+- Changed: the plugin check before each configuration reads the package's `<url>.sha256` sidecar
+  and compares it with the installed manifest's `sha256` (the file name, as before, without a
+  sidecar or for a package installed by an older node), instead of a `HEAD` request.
+  A changed package is downloaded, its hash verified, extracted into `Plugins.new/` and checked
+  for `coreVersion` (the same Core major and a minor no newer than the node's). A refused package
+  never touches `Plugins/`: the devices run with the installed plugins and the status is `failed`
+  with the reason.
+- Changed: at the next start the contents of `Plugins/` move to `Plugins.previous/` and those of
+  `Plugins.new/` to `Plugins/`; until then nothing is deleted. A package installed at this start
+  that doesn't load (a DLL fails, or no plugin) is rolled back and the node exits with code 75,
+  once; it isn't installed again (`Data/plugins.rejected.json`, delete it to retry). A first
+  install, with no plugins before it, stays with what of it loaded and logs why.
+- Fixed: after a restart for a new package, the node started with the saved configuration that
+  named the previous package, installed that one again, and so alternated between the two packages
+  on every start. It now saves the new configuration before it restarts.
+- Fixed: right after an install the node reported, and compared against, the previous package's
+  manifest, so it downloaded the new package once more and restarted again.
+- Changed: a plugin DLL that fails to load no longer stops the other plugins from loading
+  (`PluginLoader`). The `plugin-metadata` HTTP client is now `plugins` (5-minute timeout, the
+  outbound URL policy for `plugin`).
+
 ## [1.13.0] - 2026-11-02
 
 The optional security mode's seams ([I34](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i34-security-seams-with-the-mode-fixed-at-off-m), [design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/security-mode.md) phase S0), with RIoT2.Core 1.18.0, which plugins
