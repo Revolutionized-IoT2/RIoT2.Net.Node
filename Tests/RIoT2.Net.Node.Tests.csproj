@@ -36,4 +36,18 @@
     <MSBuild Projects="..\..\RIoT2.Net.Devices\RIoT2.Net.Devices.csproj" Targets="Publish"
              Properties="Configuration=$(Configuration);NoBuild=true;PublishDir=$(ProjectDir)$(IntermediateOutputPath)packed-plugin\;RIoT2PluginOutputDir=$(TargetDir)PackedPlugin\" />
   </Target>
+
+  <!-- dotnet new riot2-plugin from the template package of the node's Core version (plan M12 step 6), in a private
+       template hive, published like a release: TemplatePluginInstallsAndLoadsIntoNode loads the zip from
+       TemplatePlugin\. The package comes from the configured NuGet sources (GitHub Packages in CI). -->
+  <Target Name="PackTemplatePlugin" AfterTargets="Build">
+    <PropertyGroup>
+      <_RIoT2CoreVersion>@(PackageVersion->WithMetadataValue('Identity', 'RIoT2.Core.Node')->'%(Version)')</_RIoT2CoreVersion>
+      <_TemplateWork>$(ProjectDir)$(IntermediateOutputPath)template-plugin\</_TemplateWork>
+    </PropertyGroup>
+    <RemoveDir Directories="$(_TemplateWork);$(TargetDir)TemplatePlugin" />
+    <Exec Command="dotnet new install RIoT2.Core.Devices.Templates@$(_RIoT2CoreVersion) --debug:custom-hive &quot;$(_TemplateWork)hive&quot;" />
+    <Exec Command="dotnet new riot2-plugin -n Template.Smoke -o &quot;$(_TemplateWork)Template.Smoke&quot; --DisplayName &quot;Template smoke&quot; --debug:custom-hive &quot;$(_TemplateWork)hive&quot;" />
+    <Exec Command="dotnet publish &quot;$(_TemplateWork)Template.Smoke\Template.Smoke.csproj&quot; -c Release --nologo -p:RIoT2PluginOutputDir=&quot;$(TargetDir)TemplatePlugin\\&quot;" />
+  </Target>
 </Project>

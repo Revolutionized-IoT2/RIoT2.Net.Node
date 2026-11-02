@@ -5,6 +5,18 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-02
+
+Async-first plugins ([I41](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-3-4.md#i41-async-first-plugins-and-the-plugin-template-m)), with RIoT2.Core 1.23.0, which plugins built on Core 1.23.0 (Devices
+1.7.0, RasPi.Devices 1.6.0, `dotnet new riot2-plugin`) need. No port, user, volume, variable or
+behaviour changes; older plugins keep working.
+
+- Changed: the node calls devices only through Core's `DeviceCalls`: async devices are awaited, and
+  legacy synchronous ones run on the thread pool (as before).
+- Tests: `TemplatePluginInstallsAndLoadsIntoNode` creates a plugin with `dotnet new riot2-plugin`
+  from the template package of the node's Core version, publishes it like a release, and loads,
+  starts, refreshes, commands and stops its device; the build's `PackTemplatePlugin` target makes it.
+
 ## [1.14.0] - 2026-11-02
 
 Verified plugin updates ([I35](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-3-4.md#i35-verified-plugin-updates-m), [design 7.2](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/desired-state-configuration.md) phase 4, backlog item 5), with

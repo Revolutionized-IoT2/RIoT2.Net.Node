@@ -52,7 +52,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
   passes the `RIOT2_*` settings through the host configuration and replaces nothing else, so a
   startup change must keep those tests passing.
-- The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.19.0 (GitHub Packages) and ships the `RIoT2.Core` facade with `ExcludeAssets="compile"`, for plugins built before Core 1.13.0; it shares every `RIoT2.Core*` assembly with plugins. Don't compile against the facade. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. Plugin updates (design 7.2 phase 4) use Core's `PluginPackageInstaller` (`UpdateAsync` from the applier, `InstallPluginPackage`/`ConfirmStartup` in `Program.cs`); `Tests/PluginUpdateTests.cs` covers them. To try an unreleased Core, restore with
+- The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.23.0 (GitHub Packages) and ships the `RIoT2.Core` facade with `ExcludeAssets="compile"`, for plugins built before Core 1.13.0; it shares every `RIoT2.Core*` assembly with plugins. Don't compile against the facade. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. Plugin updates (design 7.2 phase 4) use Core's `PluginPackageInstaller` (`UpdateAsync` from the applier, `InstallPluginPackage`/`ConfirmStartup` in `Program.cs`); `Tests/PluginUpdateTests.cs` covers them. To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
   `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`. Each `FROM` is pinned by digest
@@ -68,7 +68,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 | `Services/ConfigurationService.cs` | Node configuration from `IOptions<NodeOptions>`, and Debug-only local device configuration |
 | `Services/MqttBackgroundService.cs` | Hosted MQTT start/stop wrapper; Debug-only local configuration load |
 | `Services/NodeOptions.cs` | Every `RIOT2_*` setting the node reads, validated at startup with Core's `SettingsReader` |
-| `Tests/` | MSTest hardware-free integration and unit tests; references `RIoT2.Net.Devices`, and packs it into `PackedPlugin/` after the build for `PluginCompatibilityTests` |
+| `Tests/` | MSTest hardware-free integration and unit tests; references `RIoT2.Net.Devices`, and after the build packs it into `PackedPlugin/` and a `dotnet new riot2-plugin` plugin into `TemplatePlugin/` for `PluginCompatibilityTests` |
 | `Dockerfile`, `Dockerfile_Arm64` | Production container images; both listen on port 80 |
 | `.github/workflows/ci.yml`, `release.yml` | CI on every push; image release on a tag |
 
@@ -109,12 +109,13 @@ The code side of these hub contracts is in this repository:
   not create incompatible `IDevice` or async lifecycle types.
 - The templates endpoint uses Core's `DeviceTemplates.Create`, the same code the plugins'
   conformance test checks. Don't build templates in the node.
-- New I/O-heavy devices should use `AsyncDeviceBase` / `IAsyncCommandDevice`. Do not add
-  untracked background tasks, `async void` lifecycle methods or blocking waits in host code.
+- Call devices only through Core's `DeviceCalls` (async; `AsyncDeviceBase`'s sync members throw
+  since Core 1.23.0). Do not add untracked background tasks, `async void` lifecycle methods or
+  blocking waits in host code.
 - Commands must remain admitted without awaiting device I/O in the MQTT receive callback. Preserve
   generation-bound ownership, bounded admission and awaited shutdown.
 - Release the Node image and plugin packages together, node first. Plugins run inside the Node's
-  `RIoT2.Core` version (1.19.0, set in `Directory.Packages.props`); a plugin built against a newer
+  `RIoT2.Core` version (1.23.0, set in `Directory.Packages.props`); a plugin built against a newer
   Core minor or another major is refused (`PluginCompatibility`). A `net10.0` plugin cannot
   load into a `net9.0` node, while the legacy-plugin compatibility test proves a `net9.0` plugin
   built against the pre-split RIoT2.Core 1.12.0 loads into the `net10.0` node. Keep that fixture

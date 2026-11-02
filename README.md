@@ -212,7 +212,7 @@ security mode ([design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/
   `net10.0` node.
 - Release the Node image and the plugin packages together, node first. Plugins run with the Node
   host's `RIoT2.Core*` assemblies: a plugin built against a newer Core than the node's doesn't
-  load, and since 1.14.0 the node refuses to install it (plugins on Core 1.19.0 need Node 1.14.0). Plugins built against a RIoT2.Core from before
+  load, and since 1.14.0 the node refuses to install it (plugins on Core 1.23.0 need Node 1.15.0). Plugins built against a RIoT2.Core from before
   the 1.13.0 package split resolve their types through the facade.
 
 ## Contributing

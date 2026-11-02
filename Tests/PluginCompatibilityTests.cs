@@ -146,6 +146,61 @@ public class PluginCompatibilityTests
         }
     }
 
+    [TestMethod]
+    public async Task TemplatePluginInstallsAndLoadsIntoNode()
+    {
+        // dotnet new riot2-plugin from the template package of this node's Core version, published like a release
+        // by the PackTemplatePlugin target (plan M12 step 6).
+        var zip = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "TemplatePlugin"), "Template.Smoke_*.zip").Single();
+        Assert.IsTrue(File.Exists(zip + ".sha256"));
+        var folder = Path.Combine(Path.GetTempPath(), "riot2-template-plugin-" + Guid.NewGuid().ToString("N"));
+        System.IO.Compression.ZipFile.ExtractToDirectory(zip, folder);
+        try
+        {
+            var manifest = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "PluginManifest.json"))).RootElement;
+            Assert.AreEqual("Template smoke", manifest.GetProperty("name").GetString());
+            Assert.IsTrue(RIoT2.Core.Plugins.PluginCompatibility.IsCompatible(manifest.GetProperty("coreVersion").GetString(),
+                RIoT2.Core.Plugins.PluginCompatibility.HostCoreVersion, out var reason), reason);
+            Assert.IsFalse(Directory.GetFiles(folder, "RIoT2.Core*.dll").Any());
+
+            // Same steps as Program.loadPlugins.
+            var plugins = new List<Type>();
+            foreach (var file in Directory.GetFiles(folder, "*.dll"))
+            {
+                var context = new PluginLoadContext(file);
+                var assembly = context.LoadFromAssemblyName(AssemblyName.GetAssemblyName(file));
+                plugins.AddRange(assembly.GetTypes().Where(t => !t.IsAbstract && t.GetInterface(nameof(IDevicePlugin)) != null));
+            }
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton<ILogger>(NullLogger.Instance);
+            ((IDevicePlugin)Activator.CreateInstance(plugins.Single())!).Initialize(services);
+            using var provider = services.BuildServiceProvider();
+            var device = provider.GetServices<IDevice>().Single();
+            Assert.AreEqual("Counter", device.GetType().Name);
+            Assert.IsTrue(RIoT2.Core.Plugins.DeviceCalls.IsAsynchronous(device), "The template's device is async (plan M12 step 5).");
+
+            var configuration = RIoT2.Core.Plugins.DeviceTemplates.Create(device);
+            Assert.AreEqual("1", configuration.DeviceParameters["step"], "The options' defaults are in the template.");
+            configuration.DeviceParameters["step"] = "2";
+            var values = new List<double>();
+            device.ReportUpdated += (_, report) => values.Add(((Report)report).Value.GetValue<double>());
+            device.Initialize(configuration);
+            await RIoT2.Core.Plugins.DeviceCalls.StartAsync(device, default);
+            await RIoT2.Core.Plugins.DeviceCalls.RefreshAsync(device, device.Id, device.Id, default);
+            await RIoT2.Core.Plugins.DeviceCalls.ExecuteCommandAsync(device, configuration.CommandTemplates!.Single().Id, "5", default);
+            await RIoT2.Core.Plugins.DeviceCalls.StopAsync(device, default);
+
+            CollectionAssert.AreEqual(new[] { 2d, 5d }, values);
+            Assert.AreEqual(RIoT2.Core.DeviceState.Stopped, device.State);
+        }
+        finally
+        {
+            try { Directory.Delete(folder, recursive: true); }
+            catch (Exception x) when (x is IOException or UnauthorizedAccessException) { } // Windows: the load contexts keep the DLLs open
+        }
+    }
+
     public sealed class LegacyFixture : DeviceBase, IDevice
     {
         public LegacyFixture() : base(NullLogger.Instance) { }
