@@ -8,6 +8,7 @@ using RIoT2.Core.Interfaces;
 using RIoT2.Core.Interfaces.Services;
 using RIoT2.Core.Models;
 using RIoT2.Core.Plugins;
+using RIoT2.Core.Security;
 using RIoT2.Core.Services;
 using RIoT2.Net.Node;
 using RIoT2.Net.Node.Services;
@@ -64,13 +65,22 @@ builder.Services.AddSingleton<DeviceConfigurationCoordinator>(services => new De
     token => ((IAsyncDeviceService)services.GetRequiredService<IDeviceService>()).StopAllDevicesAsync(token),
     nodeLogger));
 builder.Services.AddHostedService(services => services.GetRequiredService<DeviceConfigurationCoordinator>());
-builder.Services.AddHttpClient("plugin-metadata", client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient("plugin-metadata", client => client.Timeout = TimeSpan.FromSeconds(30))
+    .AddHttpMessageHandler(services => new OutboundUrlPolicyHandler(services.GetRequiredService<IOutboundUrlPolicy>(), OutboundPurposes.Plugin));
 builder.Services.AddHealthChecks().AddCheck<MqttHealthCheck>("mqtt");
 
 // Plugin controllers are built with nullable reference types; the annotations must not make MVC
 // require request members that were optional (plan M8 step 9).
 builder.Services.Configure<Microsoft.AspNetCore.Mvc.MvcOptions>(options =>
-    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
+{
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+    // A plugin action without its own policy gets Viewer (GET) or Operator (design 7.5).
+    options.Conventions.Add(new DefaultPolicyConvention());
+});
+
+// The optional security mode's seams (design 7.5, phase S0): every endpoint has a policy, which the
+// LocalTrust scheme passes while RIOT2_SECURITY_MODE is off (the only mode this version accepts).
+builder.Services.AddRIoT2Security(nodeOptions.Value.Security);
 
 _configurationService.InstallPluginPackage();
 loadPlugins();
@@ -217,15 +227,17 @@ async Task<bool> UpdatePluginPackageAsync(IServiceProvider services, NodeDeviceC
     return false;
 }
 
+app.UseRIoT2Security();
+
 app.MapGet("/api/node/manifest", (INodeConfigurationService configuration) =>
 {
     return Results.Ok(configuration.Configuration.Manifest);
-});
+}).RequireAuthorization(SecurityPolicies.Viewer);
 
 app.MapGet("/api/node/plugin/manifest", (INodeConfigurationService configuration) =>
 {
     return Results.Ok(configuration.Configuration.PluginManifest);
-});
+}).RequireAuthorization(SecurityPolicies.Viewer);
 
 //Provides state information on each device
 app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
@@ -245,7 +257,7 @@ app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extens
     }
 
     return Results.Ok(states);
-});
+}).RequireAuthorization(SecurityPolicies.Viewer);
 
 //Provides configuration templates 
 app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
@@ -263,9 +275,9 @@ app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService,
         }
     }
     return Results.Ok(templates);
-});
+}).RequireAuthorization(SecurityPolicies.Viewer);
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 
 if (builder.Environment.IsDevelopment())
 {

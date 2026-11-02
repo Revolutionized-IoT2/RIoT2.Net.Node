@@ -79,6 +79,8 @@ setting:
 | `RIOT2_MQTT_PORT` | No | MQTT broker port; default 1883 |
 | `RIOT2_MQTT_USERNAME` | No | MQTT username |
 | `RIOT2_MQTT_PASSWORD` | No | MQTT password |
+| `RIOT2_MQTT_TLS`, `RIOT2_MQTT_CA_FILE` | No | TLS to the broker (port 8883), optionally with a private CA (Node 1.13.0) |
+| `RIOT2_SECURITY_MODE`, `RIOT2_API_KEY`, … | No | The optional security mode; only `off` yet. The key is sent when the node fetches its configuration ([env-vars](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/env-vars.md#shared-variables)) |
 | `RIOT2_LOG_FORMAT` | No | `text` (default) or `json` for the console and `Logs/RIoT2.log` |
 | `RIOT2_LOG_LEVEL` | No | `Trace` … `Critical`; default `Information` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | OTLP collector for metrics, such as `http://otel-collector:4317`; unset exports nothing |
@@ -182,7 +184,9 @@ This repository currently serves:
 | `GET` | `/health` | ASP.NET Core health check |
 
 Loaded plugin controllers can add their own routes, such as the default devices plugin's
-`POST /api/webhook/{address}` and download endpoints.
+`POST /api/webhook/{address}` and download endpoints. Every route has a policy for the optional
+security mode ([design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/security-mode.md)): the node's are `Viewer`, and a plugin action without one gets `Viewer`
+(`GET`) or `Operator`. While `RIOT2_SECURITY_MODE` is `off`, every request passes.
 
 ## Versions and releases
 
@@ -195,7 +199,7 @@ Loaded plugin controllers can add their own routes, such as the default devices 
   `net10.0` node.
 - Release the Node image and the plugin packages together, node first. Plugins run with the Node
   host's `RIoT2.Core*` assemblies: a plugin built against a newer Core than the node's doesn't
-  load (plugins on Core 1.17.0 need Node 1.12.0). Plugins built against a RIoT2.Core from before
+  load (plugins on Core 1.18.0 need Node 1.13.0). Plugins built against a RIoT2.Core from before
   the 1.13.0 package split resolve their types through the facade.
 
 ## Contributing

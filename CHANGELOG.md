@@ -5,6 +5,23 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-11-02
+
+The optional security mode's seams ([I34](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i34-security-seams-with-the-mode-fixed-at-off-m), [design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/security-mode.md) phase S0), with RIoT2.Core 1.18.0, which plugins
+built on Core 1.18.0 need. No port, user, volume or JSON changes; with the default mode `off`
+nothing is enforced.
+
+- Added: every endpoint has a policy. The node's routes are `Viewer`; a plugin action without its
+  own policy gets `Viewer` for `GET` and `Operator` otherwise (`DefaultPolicyConvention`), so the
+  Devices webhook is `Operator` and its downloads `Viewer`. `/health` is anonymous. The
+  `LocalTrust` scheme passes every policy while the mode is `off`.
+- Added: `RIOT2_SECURITY_MODE` (only `off` is accepted; `audit` or `on` stops the start),
+  `RIOT2_SECURITY_FEATURES`, `RIOT2_API_KEY` (sent in `X-RIoT2-Key` when the node fetches its
+  configuration from the orchestrator) and `RIOT2_CORS_ORIGINS`.
+- Added: `RIOT2_MQTT_TLS` and `RIOT2_MQTT_CA_FILE` connect to a TLS broker.
+- Changed: the plugin metadata request and every `Web` request of a plugin pass the outbound URL
+  policy (allow-all while `off`).
+
 ## [1.12.1] - 2026-11-02
 
 Supply chain ([I33](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-2.md#i33-supply-chain-s)). No port, user, volume, variable or JSON changes.

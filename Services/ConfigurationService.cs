@@ -23,6 +23,8 @@ namespace RIoT2.Net.Node.Services
             _dataFolder = dataFolder;
         }
 
+        protected override string? ServiceApiKey => _options.Security.ApiKey;
+
         protected override string AppliedConfigurationPath => Path.Combine(_dataFolder, "configuration.applied.json");
 
         public override NodeConfiguration Configuration 

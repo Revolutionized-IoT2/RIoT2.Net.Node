@@ -52,7 +52,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
   passes the `RIOT2_*` settings through the host configuration and replaces nothing else, so a
   startup change must keep those tests passing.
-- The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.17.0 (GitHub Packages) and ships the `RIoT2.Core` facade with `ExcludeAssets="compile"`, for plugins built before Core 1.13.0; it shares every `RIoT2.Core*` assembly with plugins. Don't compile against the facade. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. To try an unreleased Core, restore with
+- The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.18.0 (GitHub Packages) and ships the `RIoT2.Core` facade with `ExcludeAssets="compile"`, for plugins built before Core 1.13.0; it shares every `RIoT2.Core*` assembly with plugins. Don't compile against the facade. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
   `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`. Each `FROM` is pinned by digest
@@ -93,8 +93,10 @@ The code side of these hub contracts is in this repository:
 
 - Run integration tests and real-device trials with `-c Release`; Debug has a different
   configuration path and is not a valid integration proxy.
-- Keep HTTP APIs anonymous. The platform security model is an isolated trusted network; do not add
-  ad-hoc per-endpoint authentication here.
+- Nothing is enforced while `RIOT2_SECURITY_MODE` is `off` (the only mode yet). Every endpoint
+  needs a policy (`RequireAuthorization(SecurityPolicies.Viewer)`) or `AllowAnonymous()`;
+  `DefaultPolicyConvention` covers plugin actions. The end-to-end suite fails on an endpoint
+  without either. No ad-hoc per-endpoint authentication.
 - Validate environment variables before startup. `RIOT2_NODE_ID`, `RIOT2_NODE_URL` and
   `RIOT2_MQTT_IP` must remain required, and `RIOT2_NODE_URL` must be absolute `http`/`https`.
 - Load plugins only from `Plugins/` next to the executable. A plugin must expose exactly one

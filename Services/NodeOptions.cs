@@ -25,6 +25,12 @@ namespace RIoT2.Net.Node.Services
         public TelemetryOptions Telemetry { get; set; } = new();
 
         /// <summary>
+        /// <c>RIOT2_SECURITY_MODE</c>, <c>RIOT2_SECURITY_FEATURES</c>, <c>RIOT2_API_KEY</c> and
+        /// <c>RIOT2_CORS_ORIGINS</c> (design 7.5); this version accepts the mode <c>off</c> only.
+        /// </summary>
+        public SecurityOptions Security { get; set; } = new();
+
+        /// <summary>
         /// Reads and validates the settings, and throws <see cref="ConfigurationValidationException"/>
         /// listing every problem (logged as critical) when any is missing or invalid.
         /// </summary>
@@ -37,7 +43,8 @@ namespace RIoT2.Net.Node.Services
                 Url = settings.RequiredHttpUrl(UrlVariable),
                 Mqtt = MqttOptions.Read(settings),
                 Logging = LoggingOptions.Read(settings),
-                Telemetry = TelemetryOptions.Read(settings)
+                Telemetry = TelemetryOptions.Read(settings),
+                Security = SecurityOptions.Read(settings)
             };
             settings.ThrowIfInvalid("node", logger);
             return options;
