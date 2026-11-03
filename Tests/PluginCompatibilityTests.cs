@@ -25,13 +25,12 @@ public class PluginCompatibilityTests
             typeof(RIoT2.Core.Utils.MqttClient).Assembly,
             typeof(RIoT2.Core.Utils.Web).Assembly,
             typeof(RIoT2.Core.Services.NodeMqttService).Assembly,
-            Assembly.Load("RIoT2.Core"), // the facade
             typeof(IServiceCollection).Assembly,
             typeof(ILogger).Assembly,
         };
         CollectionAssert.AreEquivalent(
-            new[] { "RIoT2.Core", "RIoT2.Core.Contracts", "RIoT2.Core.Devices", "RIoT2.Core.Http", "RIoT2.Core.Mqtt", "RIoT2.Core.Node" },
-            shared.Take(6).Select(a => a.GetName().Name).ToArray());
+            new[] { "RIoT2.Core.Contracts", "RIoT2.Core.Devices", "RIoT2.Core.Http", "RIoT2.Core.Mqtt", "RIoT2.Core.Node" },
+            shared.Take(5).Select(a => a.GetName().Name).ToArray());
         foreach (var assembly in shared)
             Assert.AreSame(assembly, context.LoadFromAssemblyName(assembly.GetName()), assembly.GetName().Name);
     }
@@ -60,11 +59,10 @@ public class PluginCompatibilityTests
         var context = new PluginLoadContext(pluginPath);
         var plugin = context.LoadFromAssemblyName(AssemblyName.GetAssemblyName(pluginPath));
         var framework = plugin.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
-        // Built against RIoT2.Core 1.12.0, before the split: DeviceBase, IDevice and DeviceConfiguration
-        // resolve through the node's RIoT2.Core facade to RIoT2.Core.Devices and .Contracts.
-        var core = plugin.GetReferencedAssemblies().Single(a => a.Name == "RIoT2.Core");
-        Assert.IsLessThan(new Version(1, 13), core.Version!, "The fixture must reference a RIoT2.Core from before the package split.");
-        Assert.IsFalse(plugin.GetReferencedAssemblies().Any(a => a.Name!.StartsWith("RIoT2.Core.", StringComparison.Ordinal)));
+        // Built against RIoT2.Core.Devices of the node's Core major; no RIoT2.Core facade since Core 2.0.0.
+        var core = plugin.GetReferencedAssemblies().Single(a => a.Name == "RIoT2.Core.Devices");
+        Assert.AreEqual(typeof(IDevice).Assembly.GetName().Version!.Major, core.Version!.Major);
+        Assert.IsFalse(plugin.GetReferencedAssemblies().Any(a => a.Name == "RIoT2.Core"));
         Assert.AreEqual(".NETCoreApp,Version=v9.0", framework, "The fixture must stay one target framework behind the node.");
         Assert.AreNotEqual(typeof(PluginCompatibilityTests).Assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName, framework);
 
@@ -88,7 +86,7 @@ public class PluginCompatibilityTests
     // The zip RIoT2.Core.Devices.Build packs on publish (plan M12 step 3), installed and loaded the way
     // the node does it: extract into a plugin folder, then every DLL in its own PluginLoadContext.
     [TestMethod]
-    public void PackedDevicesPluginInstallsAndLoadsIntoNode()
+    public async Task PackedDevicesPluginInstallsAndLoadsIntoNode()
     {
         var packed = Path.Combine(AppContext.BaseDirectory, "PackedPlugin");
         var zip = Directory.GetFiles(packed, "RIoT2.Net.Devices_*.zip").Single();
@@ -109,6 +107,8 @@ public class PluginCompatibilityTests
             Assert.AreEqual(typeof(IDevice).Assembly.GetName().Version!.Major, Version.Parse(manifest.GetProperty("coreVersion").GetString()!).Major);
             Assert.IsFalse(Directory.GetFiles(folder, "RIoT2.Core*.dll").Any(), "The node supplies RIoT2.Core*; a plugin must not ship it.");
             Assert.IsTrue(File.Exists(Path.Combine(folder, "RIoT2.Net.Devices.dll")));
+            // Core 2.0.0 has no Newtonsoft.Json, so the node doesn't ship it: Google.Apis brings its own (I45).
+            Assert.IsTrue(File.Exists(Path.Combine(folder, "Newtonsoft.Json.dll")));
 
             // Same steps as Program.loadPlugins.
             var plugins = new List<(PluginLoadContext Context, Type Type)>();
@@ -135,8 +135,8 @@ public class PluginCompatibilityTests
             using var provider = services.BuildServiceProvider();
             var device = (IDevice)ActivatorUtilities.CreateInstance(provider, devices.Single(t => t.Name == "Virtual"));
             device.Initialize(new DeviceConfiguration { Id = "packed", CommandTemplates = [], ReportTemplates = [] });
-            device.Start();
-            device.Stop();
+            await RIoT2.Core.Plugins.DeviceCalls.StartAsync(device, default);
+            await RIoT2.Core.Plugins.DeviceCalls.StopAsync(device, default);
             Assert.AreEqual(RIoT2.Core.DeviceState.Stopped, device.State);
         }
         finally
@@ -203,7 +203,9 @@ public class PluginCompatibilityTests
 
     public sealed class LegacyFixture : DeviceBase, IDevice
     {
+#pragma warning disable CS0618 // A synchronous device on purpose: the node still runs them in Core 2.x.
         public LegacyFixture() : base(NullLogger.Instance) { }
+#pragma warning restore CS0618
         public override void ConfigureDevice() { }
         public override void StartDevice() { }
         public override void StopDevice() { }

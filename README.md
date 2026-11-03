@@ -7,8 +7,7 @@ endpoints consumed by the orchestrator.
 
 - Type: ASP.NET Core web application
 - Target framework: `net10.0`
-- Core packages: `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.14.0, plus the `RIoT2.Core` facade at
-  run time only, for plugins built before Core 1.13.0
+- Core packages: `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 2.0.0 (version in `Directory.Packages.props`)
 - Container image: `ghcr.io/revolutionized-iot2/riot2-node`
 
 How the node fits into the platform: [architecture overview](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/architecture/overview.md).
@@ -212,8 +211,9 @@ security mode ([design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/
   `net10.0` node.
 - Release the Node image and the plugin packages together, node first. Plugins run with the Node
   host's `RIoT2.Core*` assemblies: a plugin built against a newer Core than the node's doesn't
-  load, and since 1.14.0 the node refuses to install it (plugins on Core 1.23.0 need Node 1.15.0). Plugins built against a RIoT2.Core from before
-  the 1.13.0 package split resolve their types through the facade.
+  load, and since 1.14.0 the node refuses to install it. Node 2.0.0 runs on Core 2.0.0 and refuses
+  plugins built on Core 1.x (another major): install Devices and RasPi.Devices 2.0.0 with it.
+  Plugins built before the 1.13.0 package split need the `RIoT2.Core` facade, which is gone.
 
 ## Contributing
 

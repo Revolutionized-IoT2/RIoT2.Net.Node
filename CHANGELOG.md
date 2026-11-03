@@ -5,6 +5,18 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-03
+
+Core 2.0 ([I45](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-3-4.md#i45-core-20-remove-compatibility-layers-m)). **Breaking for plugins**: the node refuses a plugin built on Core 1.x, so
+install RIoT2.Net.Devices and RIoT2.Net.RasPi.Devices 2.0.0 with it ([upgrading guide](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/guides/upgrading.md#core-20)).
+
+- Changed: built on `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 2.0.0.
+- Removed: the `RIoT2.Core` facade the node shipped for plugins built before Core 1.13.0, and
+  Newtonsoft.Json, which came with Core. A plugin that uses Newtonsoft.Json packs its own; Devices
+  2.0.0 does (Google.Apis needs it).
+- Tests: the previous-target-framework fixture (`Tests/LegacyPlugin`) is built on
+  `RIoT2.Core.Devices`, and the packed Devices plugin is started through `DeviceCalls`.
+
 ## [1.15.0] - 2026-11-02
 
 Async-first plugins ([I41](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-3-4.md#i41-async-first-plugins-and-the-plugin-template-m)), with RIoT2.Core 1.23.0, which plugins built on Core 1.23.0 (Devices

@@ -52,7 +52,7 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 - RIoT2.Tests runs this `Program.cs` end to end nightly ([end-to-end tests](https://github.com/Revolutionized-IoT2/RIoT2.Tests/blob/main/README.md#end-to-end-tests)). The harness
   passes the `RIOT2_*` settings through the host configuration and replaces nothing else, so a
   startup change must keep those tests passing.
-- The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 1.23.0 (GitHub Packages) and ships the `RIoT2.Core` facade with `ExcludeAssets="compile"`, for plugins built before Core 1.13.0; it shares every `RIoT2.Core*` assembly with plugins. Don't compile against the facade. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. Plugin updates (design 7.2 phase 4) use Core's `PluginPackageInstaller` (`UpdateAsync` from the applier, `InstallPluginPackage`/`ConfirmStartup` in `Program.cs`); `Tests/PluginUpdateTests.cs` covers them. To try an unreleased Core, restore with
+- The node compiles against `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 2.0.0 (GitHub Packages); it shares every `RIoT2.Core*` assembly with plugins. The `RIoT2.Core` facade and Newtonsoft.Json are gone since Core 2.0.0 (I45): a plugin that needs Newtonsoft packs it. Command results come from Core's `NodeMqttService`; `Tests/NodeCommandResultTests.cs` covers them. Desired state (design 7.2) comes from Core's `NodeConfigurationServiceBase` and `Services/DeviceConfigurationApplier.cs`, which every application goes through (plugin check, device diff, saved configuration, status); `Tests/NodeDesiredStateTests.cs` covers it. Plugin updates (design 7.2 phase 4) use Core's `PluginPackageInstaller` (`UpdateAsync` from the applier, `InstallPluginPackage`/`ConfirmStartup` in `Program.cs`); `Tests/PluginUpdateTests.cs` covers them. To try an unreleased Core, restore with
   `C:\Src\RIoT2\.localfeed` as an extra NuGet source. A local feed package is not a release.
 - The default Dockerfile uses `aspnet:10.0-alpine` / `sdk:10.0-alpine`; `Dockerfile_Arm64` uses
   `aspnet:10.0-noble-arm64v8` and builds on `sdk:10.0`. Each `FROM` is pinned by digest
@@ -115,11 +115,11 @@ The code side of these hub contracts is in this repository:
 - Commands must remain admitted without awaiting device I/O in the MQTT receive callback. Preserve
   generation-bound ownership, bounded admission and awaited shutdown.
 - Release the Node image and plugin packages together, node first. Plugins run inside the Node's
-  `RIoT2.Core` version (1.23.0, set in `Directory.Packages.props`); a plugin built against a newer
+  `RIoT2.Core` version (2.0.0, set in `Directory.Packages.props`); a plugin built against a newer
   Core minor or another major is refused (`PluginCompatibility`). A `net10.0` plugin cannot
   load into a `net9.0` node, while the legacy-plugin compatibility test proves a `net9.0` plugin
-  built against the pre-split RIoT2.Core 1.12.0 loads into the `net10.0` node. Keep that fixture
-  on 1.12.0 (`VersionOverride`) until Core 2.0 removes the facade.
+  (`Tests/LegacyPlugin`, on `RIoT2.Core.Devices` of the node's major, with a synchronous device)
+  loads into the `net10.0` node.
 - Keep `PackageReference` items versionless; package versions belong in `Directory.Packages.props`.
 - Do not commit or document real values from `Data/`, `Properties/launchSettings.json` or local
   MQTT/device configuration.
@@ -154,8 +154,8 @@ The code side of these hub contracts is in this repository:
   package installed at this start that doesn't load is rolled back and the process exits with
   `PluginLoader.RollbackExitCode` (75) once; never add a second restart path. Without plugins, the
   node logs `NO PLUGINS LOADED` and keeps running.
-- Device parameter keys must be camelCase. The configuration download camel-cases dictionary keys,
-  while `DeviceBase.GetConfiguration<T>(key)` is case-sensitive (divergence C1). `FTP.cs` has
+- Device parameter keys must be camelCase. The configuration download camel-cases dictionary keys;
+  since Core 1.16.0 options binding matches them case-insensitively (divergence C1). `FTP.cs` has
   PascalCase `Storage*` keys in its storage-configuration path; report that as a bug instead of
   silently normalizing it in documentation.
 - `C:\Src\RIoT2\.localfeed` holds only local packs of unreleased Core versions. Do not assume the
