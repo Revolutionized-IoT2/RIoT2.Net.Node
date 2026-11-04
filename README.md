@@ -191,13 +191,15 @@ This repository currently serves:
 |---|---|---|
 | `GET` | `/api/node/manifest` | Node manifest from `Data/Manifest.json` |
 | `GET` | `/api/node/plugin/manifest` | Loaded plugin package manifest |
-| `GET` | `/api/device/status` | States for devices whose state is known |
+| `GET` | `/api/device/status` | States for devices whose state is known; `authorization` for a device that signs in to an account |
 | `GET` | `/api/device/configuration/templates` | Configuration templates, parameter definitions (Node 1.11.0) and Matter endpoint declarations from loaded devices |
+| `POST` | `/api/device/{id}/authorization/start` | Starts a device's account sign-in: `{ redirectUri, state }` → `{ authorizeUrl }` |
+| `POST` | `/api/device/{id}/authorization/complete` | Completes it with the provider's code: `{ code, redirectUri }` |
 | `GET` | `/health` | ASP.NET Core health check |
 
 Loaded plugin controllers can add their own routes, such as the default devices plugin's
 `POST /api/webhook/{address}` and download endpoints. Every route has a policy for the optional
-security mode ([design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/security-mode.md)): the node's are `Viewer`, and a plugin action without one gets `Viewer`
+security mode ([design 7.5](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/design/security-mode.md)): the node's are `Viewer`, except the sign-in routes (`Admin`), and a plugin action without one gets `Viewer`
 (`GET`) or `Operator`. While `RIOT2_SECURITY_MODE` is `off`, every request passes.
 
 ## Versions and releases

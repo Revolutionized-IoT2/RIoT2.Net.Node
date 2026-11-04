@@ -62,7 +62,8 @@ docker buildx build --platform linux/arm64 --secret id=nuget_token,env=NUGET_AUT
 
 | Path | Contents |
 |---|---|
-| `Program.cs` | DI setup, plugin loading, device configuration application and Minimal API endpoints |
+| `Program.cs` | DI setup, plugin loading, device configuration application and node Minimal API endpoints |
+| `DeviceEndpoints.cs` | Device Minimal API endpoints: status, configuration templates and account sign-in (start/complete) |
 | `PluginLoader.cs` | Loads every `Plugins/*.dll`; reports what loaded and what failed (`PluginLoadResult`), which decides a rollback |
 | `PluginLoadContext.cs` | Plugin `AssemblyLoadContext`; shares the assemblies in Core's `PluginHostContract` with the host |
 | `Services/ConfigurationService.cs` | Node configuration from `IOptions<NodeOptions>`, and Debug-only local device configuration |
@@ -80,8 +81,10 @@ The code side of these hub contracts is in this repository:
   `Program.cs`, `Services/ConfigurationService.cs` and Core's `NodeConfigurationServiceBase`
   verify, install and roll back plugin packages and apply `NodeDeviceConfiguration`.
 - [http-api.md](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/http-api.md):
-  `Program.cs` serves `GET /api/node/manifest`, `GET /api/node/plugin/manifest`,
-  `GET /api/device/status`, `GET /api/device/configuration/templates` and `GET /health`.
+  `Program.cs` serves `GET /api/node/manifest`, `GET /api/node/plugin/manifest` and `GET /health`;
+  `DeviceEndpoints.cs` serves `GET /api/device/status`, `GET /api/device/configuration/templates` and the
+  `Admin` sign-in routes `POST /api/device/{id}/authorization/start` and `.../complete` (Core 2.4.0). Never log
+  the sign-in code or state.
 - [mqtt-topics.md](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/contracts/mqtt-topics.md):
   Core's `NodeMqttService` handles online, configuration, command and report topics; this host
   wires it into the ASP.NET Core lifetime.

@@ -218,43 +218,8 @@ app.MapGet("/api/node/plugin/manifest", (INodeConfigurationService configuration
     return Results.Ok(configuration.Configuration.PluginManifest);
 }).RequireAuthorization(SecurityPolicies.Viewer);
 
-//Provides state information on each device
-app.MapGet("/api/device/status", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
-{
-    List<DeviceStatus> states = [];
-    foreach (var d in deviceService.Devices)
-    {
-        if (d.State == RIoT2.Core.DeviceState.Unknown)
-            continue;
-       
-        states.Add(new DeviceStatus() {
-            Id = d.Id,
-            Name = d.Name,
-            Message = d.StateMessage,
-            State = d.State
-        });
-    }
-
-    return Results.Ok(states);
-}).RequireAuthorization(SecurityPolicies.Viewer);
-
-//Provides configuration templates 
-app.MapGet("/api/device/configuration/templates", (IDeviceService deviceService, Microsoft.Extensions.Logging.ILogger logger) =>
-{
-    List<DeviceConfiguration> templates = [];
-    foreach (var d in deviceService.Devices)
-    {
-        try
-        {
-            templates.Add(DeviceTemplates.Create(d));
-        }
-        catch (Exception x)
-        {
-            logger.LogError(x, $"Error while getting configuration template for device: {d.Name} [{d.Id}]");
-        }
-    }
-    return Results.Ok(templates);
-}).RequireAuthorization(SecurityPolicies.Viewer);
+// Device status, configuration templates and account sign-in (start/complete).
+app.MapDeviceEndpoints();
 
 app.MapHealthChecks("/health").AllowAnonymous();
 

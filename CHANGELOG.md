@@ -5,6 +5,20 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+Device account sign-in: a device that signs in to a cloud account with an OAuth 2.0 authorization code (Netatmo
+first) can be connected from the UI through the orchestrator. Needs RIoT2.Core 2.4.0; existing plugins still load.
+
+- Changed: built on `RIoT2.Core.Node` and `RIoT2.Core.Hosting` 2.4.0.
+- Added: `POST /api/device/{id}/authorization/start` (`{ redirectUri, state }` → `{ authorizeUrl }`) and
+  `POST /api/device/{id}/authorization/complete` (`{ code, redirectUri }`), `Admin` policy, for a device that
+  implements `IDeviceWithAuthorization`, called through `DeviceCalls` with a 30 s timeout. Errors are
+  `{ "message": ... }`: 400 for an empty field or a device without sign-in, 404 for an unknown device, 409 when the
+  device's configuration lacks what the sign-in needs (`DeviceNotReadyException`), 502 for any other failure. The
+  code and the state are never logged.
+- Added: `GET /api/device/status` includes `authorization` (`state`, `account`, `message`) for such a device; it is
+  omitted for the others.
+- Changed: the device endpoints moved from `Program.cs` to `DeviceEndpoints.cs`; routes and policies are unchanged.
+- Tests: `DeviceAuthorizationEndpointTests` covers the routes, their errors and the status.
 - Changed: the images include ffmpeg, which the Eufy Security devices' snapshot command of RIoT2.Net.Devices 3.0.0
   uses to turn a camera's live video frame into a JPEG.
 - Changed: the images include Node.js 24 (the official binary, copied from the `node:24` image), which runs eufy-sdk
