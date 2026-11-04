@@ -5,6 +5,12 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-04
+
+- Changed: built on `RIoT2.Core.Node` 2.3.0 ([ADR 0019](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/adr/0019-forecasts-and-command-plans.md)),
+  so plugins can report forecast series (`ForecastSeries`). Install RIoT2.Net.Devices 2.1.0 with it or after it;
+  2.0.0 plugins still load.
+
 ## [2.0.0] - 2026-11-03
 
 Core 2.0 ([I45](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/increments/phase-3-4.md#i45-core-20-remove-compatibility-layers-m)). **Breaking for plugins**: the node refuses a plugin built on Core 1.x, so

@@ -6,8 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Tests/LegacyPlugin: a plugin one target framework behind the node. -->
-    <PackageVersion Include="RIoT2.Core.Devices" Version="2.0.0" />
-    <PackageVersion Include="RIoT2.Core.Hosting" Version="2.0.0" />
-    <PackageVersion Include="RIoT2.Core.Node" Version="2.0.0" />
+    <PackageVersion Include="RIoT2.Core.Devices" Version="2.3.0" />
+    <PackageVersion Include="RIoT2.Core.Hosting" Version="2.3.0" />
+    <PackageVersion Include="RIoT2.Core.Node" Version="2.3.0" />
   </ItemGroup>
 </Project>
