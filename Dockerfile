@@ -1,8 +1,11 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine@sha256:254fe017495996d3abcc487ffacdcce2b73affb380d3af87af12c8dff41fe0b0 AS base
 WORKDIR /app
-# ffmpeg: the Eufy Security device's snapshot command turns a camera's live video frame into a JPEG with it.
+# ffmpeg: the Eufy Security devices' snapshot command turns a camera's live video frame into a JPEG with it.
 RUN apk add --upgrade --no-cache tzdata ffmpeg
+# Node.js runs eufy-sdk for the Eufy Security (eufy-sdk) device of RIoT2.Net.Devices: the official binary, which
+# needs only libstdc++ and libgcc (the .NET image has them).
+COPY --from=node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 /usr/local/bin/node /usr/local/bin/node
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80

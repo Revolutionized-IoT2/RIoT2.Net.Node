@@ -2,10 +2,13 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-arm64v8@sha256:bfdb8a0389d3f274f8f5fe95b9b8fc2249084047a07e7d927b91fbcc6e46b68c AS base
 WORKDIR /app
 # The health check needs wget, which the Ubuntu image doesn't have (the Alpine one has busybox). ffmpeg: the Eufy
-# Security device's snapshot command turns a camera's live video frame into a JPEG with it.
+# Security devices' snapshot command turns a camera's live video frame into a JPEG with it.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends wget ffmpeg \
     && rm -rf /var/lib/apt/lists/*
+# Node.js runs eufy-sdk for the Eufy Security (eufy-sdk) device of RIoT2.Net.Devices: the official arm64 binary, which
+# needs only glibc, libstdc++ and libgcc (the .NET image has them).
+COPY --from=node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c /usr/local/bin/node /usr/local/bin/node
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
