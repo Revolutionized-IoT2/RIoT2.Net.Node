@@ -1,7 +1,8 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine@sha256:254fe017495996d3abcc487ffacdcce2b73affb380d3af87af12c8dff41fe0b0 AS base
 WORKDIR /app
-RUN apk add --upgrade --no-cache tzdata
+# ffmpeg: the Eufy Security device's snapshot command turns a camera's live video frame into a JPEG with it.
+RUN apk add --upgrade --no-cache tzdata ffmpeg
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80

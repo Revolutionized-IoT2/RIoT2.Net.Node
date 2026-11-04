@@ -5,6 +5,9 @@ publishes Docker images to GitHub Container Registry.
 
 ## [Unreleased]
 
+- Changed: the images include ffmpeg, which the Eufy Security device's snapshot command of RIoT2.Net.Devices 3.0.0
+  uses to turn a camera's live video frame into a JPEG.
+
 ## [2.1.0] - 2026-11-04
 
 - Changed: built on `RIoT2.Core.Node` 2.3.0 ([ADR 0019](https://github.com/Revolutionized-IoT2/.github/blob/main/docs/adr/0019-forecasts-and-command-plans.md)),

@@ -1,9 +1,10 @@
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-arm64v8@sha256:bfdb8a0389d3f274f8f5fe95b9b8fc2249084047a07e7d927b91fbcc6e46b68c AS base
 WORKDIR /app
-# The health check needs wget, which the Ubuntu image doesn't have (the Alpine one has busybox).
+# The health check needs wget, which the Ubuntu image doesn't have (the Alpine one has busybox). ffmpeg: the Eufy
+# Security device's snapshot command turns a camera's live video frame into a JPEG with it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends wget \
+    && apt-get install -y --no-install-recommends wget ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV ASPNETCORE_HTTP_PORTS=80
